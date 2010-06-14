@@ -1,0 +1,205 @@
+<HTML>
+<HEAD>
+  <TITLE> S2LITE v1.0 package documentation </TITLE>
+  <LINK rel="stylesheet" href="stylesheet.css" type="text/css" /> 
+</HEAD>
+
+<BODY>
+<H1 ALIGN=center> S2LITE package documentation </H1>
+
+<H2 ALIGN=center>Jason McEwen</H2>
+
+<P>
+The S2LITE library contains functionality to support functions defined
+on the sky and was developed primarily for astrophysical applications.
+More generally, however, any arbitrary function defined on the sphere
+may be represented.  Both real space map and harmonic space spherical
+harmonic representations are supported.  Functionality is incorporated
+also to represent power spectra and to convolve with beams.
+
+<P>
+The library design is based on object-oriented principles and is
+implemented in Fortran 90.  Generally one must instantiate a class
+object using the corresponding init routines.  The instatiated object
+should be freed once it is no longer required with the corresponding
+free routine (this deallocates all memory associated with the object).
+
+<p>
+A <a href=http://healpix.jpl.nasa.gov/>HEALPix</a> spherical
+pixelisation scheme is adopted, although this may be extended in the
+future to support other spherical pixelisations.  The spherical
+harmonic transforms applied are all based on the routines provided by
+<a href=http://healpix.jpl.nasa.gov/>HEALPix</a>.
+
+<p>
+For further details and installation instructions see the
+<a href="../README.txt">README.txt</a>
+and
+<a href="../INSTALL.txt">INSTALL.txt</a>
+files also.
+
+
+<HR>
+<H2> Classes </H2>
+
+An overview of the classes that comprise the S2LITE library is given
+here.  Please click on the link for each class for detailed
+documentation. 
+
+<p>
+<CODE><a href=s2_sky_mod.html>s2_sky_mod</a></CODE>: 
+Provides functionality to support and manipulate a function defined
+on the sky(/sphere). Support is provided to representing the sky in
+both real (map) space and in harmonic (alm) space, and also to convert
+between the two representations. One may also scale, dilate, rotate,
+downsample and add functions defined on the sky. The sky pixelisation
+used is currently based on HEALPix. 
+
+<p>
+<CODE><a href=s2_dl_mod.html>s2_dl_mod</a></CODE>: 
+Functionality to compute specified plane of the Wigner dl matrix used to
+perform rotations in harmonic space. (Provided by D. J. Mortlock)
+
+<p>
+<CODE><a href=s2_pl_mod.html>s2_pl_mod</a></CODE>: 
+ Provides functionality to support and manipulate a pl power spectrum.
+
+<p>
+<CODE><a href=s2_vect_mod.html>s2_vect_mod</a></CODE>: 
+ Provide functionality to support and rotate vectors in R^3,
+ represented in either cartesian or spherical coordinates.
+
+<p>
+<CODE><a href=s2_types_mod.html>s2_types_mod</a></CODE>: 
+ Definition of intrinsic types and constants used in the sph library.
+
+<p>
+<CODE><a href=s2_error_mod.html>s2_error_mod</a></CODE>: 
+ Functionality to handle errors that may occur in the sph
+ library. Public S2LITE error codes are defined, with corresponding
+ private error comments and default halt execution status. 
+
+
+<HR>
+<H2> Programs </H2>
+
+Utility programs based on the S2LITE library are listed here.  More S2LITE 
+programs may appear here in the future as their need becomes
+apparent.  Please click on the link for each program for detailed
+documentation. 
+
+<P>
+<CODE><a href=s2_map2sky.html>s2_map2sky</a></CODE>: 
+ Read a HEALPix map fits file and write the read map to a full s2_sky
+ fits file. 
+
+<P>
+<CODE><a href=s2_sky2map.html>s2_sky2map</a></CODE>: 
+ Read a full s2_sky file and write the map to a HEALPix fits file. 
+
+<P>
+<CODE><a href=s2_skyadd.html>s2_skyadd</a></CODE>: 
+ Add or subtract two maps of the sky.
+
+<P>
+<CODE><a href=s2_skydown.html>s2_skydown</a></CODE>: 
+ Downsample a sky.
+
+<P>
+<CODE><a href=s2_skymask.html>s2_skymask</a></CODE>: 
+ Apply a mask (containing only ones and zeros) to a sky. The output
+ map is the product of the mask and sky maps. If the display status is
+ set then masked pixels of the output map are overwritten with a magic
+ number that appears grey when plotted. Output maps producted with the
+ display option set should only be used for display purposes, and not
+ for any subsequent analysis.
+
+<P>
+<CODE><a href=s2_skymultiply.html>s2_skymultiply</a></CODE>: 
+ Multiply sky by constant scale.
+
+<P>
+<CODE><a href=s2_skyprod.html>s2_skyprod</a></CODE>: 
+ Take the product of two maps of the sky.
+
+<P>
+<CODE><a href=s2_skyup.html>s2_skyup</a></CODE>: 
+ Up-sample a sky.
+
+
+<HR>
+<H2> Support  </H2>
+
+For support or to report any bugs please contact Jason McEwen 
+(<CODE>mcewen@mrao.cam.ac.uk</CODE>).
+
+
+<HR>
+<H2> Version </H2>
+
+<P>
+<STRONG>Author:</STRONG> J. D. McEwen (<CODE>mcewen@mrao.cam.ac.uk</CODE>)
+<P>
+<STRONG>Version:</STRONG> 1.0 - October 2005
+
+<H3> Version History </H3>
+
+<ul>
+
+<li>Version 1.0<br>
+First public release of package.
+
+
+</ul>
+
+
+<HR>
+<H2> License </H2>
+
+
+     <blockquote>
+     <p>
+     S2LITE package to provide object oriented functionality for
+     functions on the sphere<br>
+     Copyright (C) 2005  Jason McEwen
+
+     <p>
+     This program is free software; you can redistribute it and/or
+     modify it under the terms of the GNU General Public License
+     as published by the Free Software Foundation; either version 2
+     of the License, or (at your option) any later version.
+
+     <p>
+     This program is distributed in the hope that it will be useful,
+     but WITHOUT ANY WARRANTY; without even the implied warranty of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+     GNU General Public License for more details 
+     (<a href="../COPYING.txt">COPYING.txt</a>).
+
+     <p>
+     You should have received a copy of the GNU General Public License
+     along with this program; if not, write to the Free Software
+     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, 
+     MA  02110-1301, USA.
+
+     </blockquote>
+
+<HR>
+<H2> Acknowledgements </H2>
+
+<p>
+JDM would like to thank Daniel Mortlock for useful discussions on the
+design of the library and also for providing the routines that compute dl matrices.
+
+<p>
+This documentation has been generated largely by <a
+href="http://theory.lcs.mit.edu/~edemaine/f90doc/">f90doc</a>, with
+some minor modifications.
+
+<HR>
+<p align=right>
+<font size="0.8em">Last modified: 20 September 2005</font>
+
+</BODY>
+</HTML>
+
