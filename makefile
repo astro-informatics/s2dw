@@ -12,12 +12,12 @@ ifeq ($(FC),f95)
   OPTF95 = -w=x95
 endif
 
-OPT = $(OPTF95)
+OPT = $(OPTF95) -m64
 
 
 # ======== LINKS ========
 
-PROGDIR = /home/jdm57/src
+PROGDIR = /Users/mcewen/src
 
 S2DWDIR  = $(PROGDIR)/s2dw
 S2DWLIB  = $(S2DWDIR)/lib
@@ -166,42 +166,42 @@ $(S2DWINC)/s2dw_test.o:     $(S2DWPROG)/s2dw_test.f90 lib
 $(S2DWBIN)/s2dw_test:       $(S2DWINC)/s2dw_test.o
 	$(FC)                                          \
 	-o $(S2DWBIN)/s2dw_test                          \
-	$(S2DWINC)/s2dw_test.o $(LDFLAGS)                            
+	$(S2DWINC)/s2dw_test.o $(LDFLAGS) $(PPFLAGS)
 
 $(S2DWINC)/s2dw_wav2sky.o:     $(S2DWPROG)/s2dw_wav2sky.f90 lib
 $(S2DWBIN)/s2dw_wav2sky:       $(S2DWINC)/s2dw_wav2sky.o
 	$(FC)                                          \
 	-o $(S2DWBIN)/s2dw_wav2sky                       \
-	$(S2DWINC)/s2dw_wav2sky.o $(LDFLAGSPROG) $(LDFLAGS)                           
+	$(S2DWINC)/s2dw_wav2sky.o $(LDFLAGSPROG) $(LDFLAGS) $(PPFLAGS)
 
 $(S2DWINC)/s2dw_analysis.o:     $(S2DWPROG)/s2dw_analysis.f90 lib
 $(S2DWBIN)/s2dw_analysis:       $(S2DWINC)/s2dw_analysis.o
 	$(FC)                                          \
 	 -o $(S2DWBIN)/s2dw_analysis                     \
-	$(S2DWINC)/s2dw_analysis.o $(LDFLAGSPROG) $(LDFLAGS)                         
+	$(S2DWINC)/s2dw_analysis.o $(LDFLAGSPROG) $(LDFLAGS) $(PPFLAGS)               
 
 $(S2DWINC)/s2dw_synthesis.o:     $(S2DWPROG)/s2dw_synthesis.f90 lib
 $(S2DWBIN)/s2dw_synthesis:       $(S2DWINC)/s2dw_synthesis.o
 	$(FC)                                          \
 	-o $(S2DWBIN)/s2dw_synthesis                     \
-	$(S2DWINC)/s2dw_synthesis.o $(LDFLAGSPROG) $(LDFLAGS)                          
+	$(S2DWINC)/s2dw_synthesis.o $(LDFLAGSPROG) $(LDFLAGS) $(PPFLAGS)                
 
 $(S2DWINC)/s2dw_wavplot.o:     $(S2DWPROG)/s2dw_wavplot.f90 lib
 $(S2DWBIN)/s2dw_wavplot:       $(S2DWINC)/s2dw_wavplot.o
 	$(FC)                                          \
 	-o $(S2DWBIN)/s2dw_wavplot                       \
-	$(S2DWINC)/s2dw_wavplot.o $(LDFLAGSPROG) $(LDFLAGS)                          
+	$(S2DWINC)/s2dw_wavplot.o $(LDFLAGSPROG) $(LDFLAGS) $(PPFLAGS)                       
 
 $(S2DWINC)/s2dw_mat2fits.o:     $(S2DWPROG)/s2dw_mat2fits.f90 lib
 $(S2DWBIN)/s2dw_mat2fits:       $(S2DWINC)/s2dw_mat2fits.o
 	$(FC)                                          \
 	-o $(S2DWBIN)/s2dw_mat2fits                       \
-	$(S2DWINC)/s2dw_mat2fits.o $(LDFLAGSPROG) $(LDFLAGS)  
+	$(S2DWINC)/s2dw_mat2fits.o $(LDFLAGSPROG) $(LDFLAGS) $(PPFLAGS)  
 
 $(S2DWINC)/s2dw_fits2mat.o:     $(S2DWPROG)/s2dw_fits2mat.f90 lib
 $(S2DWBIN)/s2dw_fits2mat:       $(S2DWINC)/s2dw_fits2mat.o
 	$(FC)                                          \
 	-o $(S2DWBIN)/s2dw_fits2mat                       \
-	$(S2DWINC)/s2dw_fits2mat.o $(LDFLAGSPROG) $(LDFLAGS) 
+	$(S2DWINC)/s2dw_fits2mat.o $(LDFLAGSPROG) $(LDFLAGS) $(PPFLAGS)
 
 
