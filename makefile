@@ -17,9 +17,9 @@ OPT = $(OPTF95)
 
 # ======== LINKS ========
 
-PROGDIR = /Users/jasonmcewen/Prog
+PROGDIR = /home/jdm57/src
 
-S2DWDIR  = $(PROGDIR)/s2dw-1.0
+S2DWDIR  = $(PROGDIR)/s2dw
 S2DWLIB  = $(S2DWDIR)/lib
 S2DWLIBNM= s2dw
 S2DWINC  = $(S2DWDIR)/include
@@ -28,15 +28,15 @@ S2DWPROG = $(S2DWDIR)/src/prog
 S2DWBIN  = $(S2DWDIR)/bin
 S2DWDOC  = $(S2DWDIR)/doc
 
-FFTWLIB      = $(PROGDIR)/fftw-3.1.2/lib
+FFTWLIB      = $(PROGDIR)/fftw/lib
 FFTWLIBNM    = fftw3
 
-HPIXDIR = $(PROGDIR)/Healpix_2.01
+HPIXDIR = $(PROGDIR)/Healpix
 HPIXLIB = $(HPIXDIR)/lib
 HPIXLIBNM= healpix
 HPIXINC = $(HPIXDIR)/include
 
-S2DIR  = $(PROGDIR)/s2-1.0
+S2DIR  = $(PROGDIR)/s2
 S2LIB  = $(S2DIR)/lib
 S2LIBNM= s2
 S2INC  = $(S2DIR)/include
