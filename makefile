@@ -17,7 +17,7 @@ OPT = $(OPTF95) -m64
 
 # ======== LINKS ========
 
-PROGDIR = /Users/mcewen/src
+PROGDIR = /Users/jdm/Src
 
 S2DWDIR  = $(PROGDIR)/s2dw
 S2DWLIB  = $(S2DWDIR)/lib
