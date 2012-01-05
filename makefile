@@ -11,7 +11,8 @@ ifeq ($(FC),f95)
   OPTF95 = -w=x95
 endif
 
-OPT = $(OPTF95) -m64 -O3 -DS2DW_VERSION=\"1.0b1\" -DS2DW_BUILD=\"`svnversion -n .`\" 
+OPT = $(OPTF95) -m64 -O3 -fopenmp \
+      -DS2DW_VERSION=\"1.0b1\" -DS2DW_BUILD=\"`svnversion -n .`\" 
 
 
 # ======== LINKS ========

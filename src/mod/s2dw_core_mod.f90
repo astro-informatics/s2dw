@@ -15,6 +15,7 @@ module s2dw_core_mod
   use s2dw_types_mod
   use s2dw_error_mod
   use s2dw_dl_mod
+  use omp_lib
 
   implicit none
 
@@ -354,7 +355,6 @@ contains
 
     complex(dpc), allocatable :: Tmmm(:,:,:), Tmmg(:,:,:), Tmbg(:,:,:)
     real(dp), allocatable :: dl(:,:)
-    real(dp) :: Ta(0:2*B-2)    ! Temp memory required to solve FFTW bug
     complex(dpc) :: sb
     complex(dpc) :: eta
     integer :: el, m, mm, mmm, jj, bb, gg
@@ -362,6 +362,7 @@ contains
     real(dp) :: msign, mmmsign
     real(dp) :: beta_b, gamma_g
     integer*8 :: fftw_plan
+    complex(dpc) :: tmp(0:B-1)
 
     fail = 0
 
@@ -386,27 +387,32 @@ contains
           call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_core_analysis_flm2wav')
        end if
        Tmmm(0:bl_hi-1, 0:bl_hi-1, 0:2*N-2) = cmplx(0d0, 0d0)
+       !$omp parallel default(none) &
+       !$omp shared(jj, el, K_gamma, Slm, flm, N, bl_lo, bl_hi) &
+       !$omp private(dl,m,mm,mmm,msign,mmmsign,sb) &
+       !$omp reduction(+: Tmmm)
+       !$omp do schedule(static)
        do el = bl_lo+1,bl_hi-1
 
           ! For each l value create the plane of the d-matrix.
           call s2dw_dl_beta_operator(dl(-el:el,-el:el), PION2, el)
 
-          msign = -1d0
-          do m = 0,el
-             msign = -msign
+          if (mod(min(N-1,el),2) == 0) then
+             ! Even case.
+             mmmsign = -1d0
+          else
+             ! Odd case.
+             mmmsign = 1d0
+          end if
+
+          do mmm = -min(N-1,el),min(N-1,el)
+             mmmsign = -mmmsign
 
              do mm = 0,el
 
-                if (mod(min(N-1,el),2) == 0) then
-                   ! Even case.
-                   mmmsign = -1d0
-                else
-                   ! Odd case.
-                   mmmsign = 1d0
-                end if
-
-                do mmm = -min(N-1,el),min(N-1,el)
-                   mmmsign = -mmmsign
+                msign = -1d0
+                do m = 0,el
+                   msign = -msign
 
                    if ((m < 0) .and. (mmm < 0)) then
                       sb = msign * mmmsign &
@@ -428,6 +434,8 @@ contains
              end do
           end	do
        end do
+       !$omp end do
+       !$omp end parallel
        deallocate(dl)
 
        ! Compute Tmbg using fast SoV
@@ -438,11 +446,15 @@ contains
           call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_core_analysis_flm2wav')
        end if
        Tmmg(0:bl_hi-1, 0:bl_hi-1, 0:N-1) = cmplx(0d0, 0d0)
-       do m = 0,bl_hi-1
+       !$omp parallel default(none) &
+       !$omp shared(Tmmm, gg, mm, bl_hi, N) &
+       !$omp private(m, gamma_g, mmm, k_indicator) &
+       !$omp reduction(+: Tmmg)
+       !$omp do schedule(static) collapse(2)
+       do gg = 0,N-1
           do mm = 0,bl_hi-1
-             do gg = 0,N-1
-                gamma_g = PI*gg/real(N,dp)				
-
+             gamma_g = PI*gg/real(N,dp)
+             do m = 0,bl_hi-1
                 do mmm = -(N-1),N-1
                    k_indicator = (1-(-1)**(N+mmm))/2 
                    if(k_indicator > 0) then
@@ -450,10 +462,11 @@ contains
                            * exp( I * (mmm*gamma_g) )
                    end if
                 end do
-
              end do
           end do
        end do
+       !$omp end do
+       !$omp end parallel
        deallocate(Tmmm)
 
        ! Compute Tmbg from Tmmg
@@ -462,19 +475,22 @@ contains
           call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_core_analysis_flm2wav')
        end if
        Tmbg(0:bl_hi-1, 0:2*bl_hi-1, 0:N-1) = cmplx(0d0, 0d0)
-       do bb = 0,2*bl_hi-1
-          beta_b = PI*(2d0*bb+1d0)/(4d0*bl_hi)					
-          do gg = 0,N-1
+       !$omp parallel default(none) &
+       !$omp shared(Tmmg, gg, bb, bl_hi, N) &
+       !$omp private(m, mm, beta_b, gamma_g, eta) &
+       !$omp reduction(+: Tmbg)
+       !$omp do schedule(static) collapse(2)
+       do gg = 0,N-1
+          do bb = 0,2*bl_hi-1
+             beta_b = PI*(2d0*bb+1d0)/(4d0*bl_hi)					
              gamma_g = PI*gg/real(N,dp)				
 
-             do m=0,bl_hi-1
+             do mm = 0,bl_hi-1
+                do m = 0,bl_hi-1
 
-                Tmbg(m,bb,gg) = Tmbg(m,bb,gg) &
-                     + Tmmg(m, 0, gg) 
-
-                do mm =1,bl_hi-1
-
-                   if(mod(m+N-1,2)==0) then
+                   if (mm==0) then
+                      eta = 1d0
+                   else if(mod(m+N-1,2)==0) then
                       eta = 2d0*cos(mm*beta_b)
                    else
                       eta = I * 2d0*sin(mm*beta_b)
@@ -488,30 +504,28 @@ contains
              end do
           end do
        end do
+       !$omp end do
+       !$omp end parallel
        deallocate(Tmmg)
 
        ! Compute Tabg from Tmbg using FFT  
        wav(jj, 0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = 0d0
-       do bb = 0,2*bl_hi-1
-          do gg = 0,N-1
-
-             call dfftw_plan_dft_c2r_1d(fftw_plan, 2*bl_hi-1, &
-                  Tmbg(0:bl_hi-1,bb,gg), Ta(0:2*bl_hi-2), FFTW_ESTIMATE)
-             call dfftw_execute(fftw_plan)
-             call dfftw_destroy_plan(fftw_plan)
-
-             wav(jj,0:2*bl_hi-2,bb,gg) = Ta(0:2*bl_hi-2)
-
-             ! Note that dfftw_plan_dft_c2r_1d *must* be called with a one 
-             ! dimensional real output array.  For example the following 
-             ! produces invalid output:
-             !   call dfftw_plan_dft_c2r_1d(fftw_plan, 2*bl_hi-1, &
-             !     Tmbg(0:bl_hi-1,bb,gg), wav(jj,0:2*bl_hi-2,bb,gg), FFTW_ESTIMATE)
-             ! This bug may be due to the way arrays are passed between 
-             ! C and Fortran.
-
+       tmp(0:bl_hi-1) = cmplx(0d0, 0d0)
+       call dfftw_plan_dft_c2r_1d(fftw_plan, 2*bl_hi-1, &
+            tmp(0:bl_hi-1), wav(jj,0:2*bl_hi-2,0,0), &
+            FFTW_MEASURE)
+       !$omp parallel default(none) &
+       !$omp shared(wav, jj, fftw_plan, Tmbg, gg, bb, bl_hi, N)
+       !$omp do schedule(static) collapse(2)
+       do gg = 0,N-1
+          do bb = 0,2*bl_hi-1
+             call dfftw_execute_dft_c2r(fftw_plan, &
+                  Tmbg(0:bl_hi-1,bb,gg), wav(jj,0:2*bl_hi-2,bb,gg))
           end do
        end do
+       !$omp end do
+       !$omp end parallel
+       call dfftw_destroy_plan(fftw_plan)
        deallocate(Tmbg)
 
     end do

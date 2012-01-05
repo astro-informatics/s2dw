@@ -97,9 +97,9 @@ contains
 
     real(kind = dp) :: lambda, xllp1, xm, big, bigi, bigi2, c, s, omc, &
          lbig, expo, renorm, ratio, c2, t, si, ang, big_const
-    real(kind = dp), pointer :: cp(:) => null(), cpi(:) => null(), &
-         cp2(:) => null(), log_first_row(:) => null(), sign(:) => null(), &
-         lrenorm(:) => null()
+    real(kind = dp), allocatable :: cp(:), cpi(:), &
+         cp2(:), log_first_row(:), sign(:), &
+         lrenorm(:)
     integer :: index, i, m, im, j, lp1
 
     ! Added by Jason McEwen 19/11/05
