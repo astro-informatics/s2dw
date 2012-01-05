@@ -391,7 +391,7 @@ contains
        !$omp shared(jj, el, K_gamma, Slm, flm, N, bl_lo, bl_hi) &
        !$omp private(dl,m,mm,mmm,msign,mmmsign,sb) &
        !$omp reduction(+: Tmmm)
-       !$omp do schedule(static)
+       !$omp do schedule(dynamic, 10)
        do el = bl_lo+1,bl_hi-1
 
           ! For each l value create the plane of the d-matrix.
@@ -450,7 +450,7 @@ contains
        !$omp shared(Tmmm, gg, mm, bl_hi, N) &
        !$omp private(m, gamma_g, mmm, k_indicator) &
        !$omp reduction(+: Tmmg)
-       !$omp do schedule(static) collapse(2)
+       !$omp do schedule(dynamic,10) collapse(2)
        do gg = 0,N-1
           do mm = 0,bl_hi-1
              gamma_g = PI*gg/real(N,dp)
@@ -479,7 +479,7 @@ contains
        !$omp shared(Tmmg, gg, bb, bl_hi, N) &
        !$omp private(m, mm, beta_b, gamma_g, eta) &
        !$omp reduction(+: Tmbg)
-       !$omp do schedule(static) collapse(2)
+       !$omp do schedule(dynamic,10) collapse(2)
        do gg = 0,N-1
           do bb = 0,2*bl_hi-1
              beta_b = PI*(2d0*bb+1d0)/(4d0*bl_hi)					
@@ -516,7 +516,7 @@ contains
             FFTW_MEASURE)
        !$omp parallel default(none) &
        !$omp shared(wav, jj, fftw_plan, Tmbg, gg, bb, bl_hi, N)
-       !$omp do schedule(static) collapse(2)
+       !$omp do schedule(dynamic,10) collapse(2)
        do gg = 0,N-1
           do bb = 0,2*bl_hi-1
              call dfftw_execute_dft_c2r(fftw_plan, &

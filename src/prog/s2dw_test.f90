@@ -21,6 +21,7 @@ program s2dw_test
   use s2dw_error_mod
   use s2dw_core_mod
   use s2dw_fileio_mod
+  use omp_lib
   !use F90_UNIX_ENV
 
   implicit none
@@ -46,7 +47,7 @@ program s2dw_test
   integer :: fail = 0, seed, i_repeat
   real(dp) :: error_flm(0:N_repeat-1)
   logical :: admiss_pass
-  real :: time_start, time_end
+  real(dp) :: time_start, time_end
   real :: durations_analysis(0:N_repeat-1)
   real :: durations_synthesis(0:N_repeat-1)
 
@@ -93,14 +94,14 @@ program s2dw_test
 
      ! Compute kernels, scaling function and directionality coefficients.
      write(*,'(a,i2)') 'Initialisation no.', i_repeat
-     call cpu_time(time_start)
+     time_start = omp_get_wtime()
      call s2dw_core_init_kernels(K_gamma, Phi2, bl_scoeff, J, B, alpha)
      call s2dw_core_init_directionality(Slm, B, N)
      admiss_pass = s2dw_core_admiss(admiss, K_gamma, Phi2, B, J)
      if(.not. admiss_pass) then
         call s2dw_error(S2DW_ERROR_ADMISS_FAIL, 's2dw_test')
      end if
-     call cpu_time(time_end)
+     time_end = omp_get_wtime()
      write(*,'(a,f43.2)') ' duration =', time_end - time_start
 
      ! Allocate memory for scaling coefficients (cannot be done earlier 
@@ -112,24 +113,24 @@ program s2dw_test
 
      ! Compute wavelet and scaling coefficients.
      write(*,'(a,i2)') 'Analysis no.', i_repeat
-     call cpu_time(time_start)
+     time_start = omp_get_wtime()
 !     call s2dw_core_analysis_flm2wav_dynamic(wavdyn, scoeff, flm_orig, K_gamma, Slm, &
 !          J, B, N, bl_scoeff, alpha)
      call s2dw_core_analysis_flm2wav(wav, scoeff, flm_orig, K_gamma, Slm, &
           J, B, N, bl_scoeff, alpha)
-     call cpu_time(time_end)
+     time_end = omp_get_wtime()
      durations_analysis(i_repeat) = time_end - time_start
      write(*,'(a,f43.2)') ' duration =', durations_analysis(i_repeat)
 
      ! Synthesis harmonic coefficients of signal from wavelet and scaling 
      ! coefficients.
      write(*,'(a,i2)') 'Synthesis no.', i_repeat
-     call cpu_time(time_start)
+     time_start = omp_get_wtime()
 !     call s2dw_core_synthesis_wav2flm_dynamic(flm_syn, wavdyn, scoeff, K_gamma, Phi2, &
 !          Slm, J, B, N, bl_scoeff, alpha)
      call s2dw_core_synthesis_wav2flm(flm_syn, wav, scoeff, K_gamma, Phi2, &
           Slm, J, B, N, bl_scoeff, alpha)
-     call cpu_time(time_end)
+     time_end = omp_get_wtime()
      durations_synthesis(i_repeat) = time_end - time_start
      write(*,'(a,f43.2)') ' duration =', durations_synthesis(i_repeat)
 
