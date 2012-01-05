@@ -38,18 +38,18 @@ module s2dw_types_mod
   ! Tolerances
   ! --------------------------------------
 
-	!! Admissibility tolerance.
-	real(dp), public, parameter :: TOL_ADMISS = 1e-12
+  !! Admissibility tolerance.
+  real(dp), public, parameter :: TOL_ADMISS = 1e-12
 
-	!! Numerical integration tolerance.
-	real(dp), public, parameter :: TOL_QUAD = 1d-12
+  !! Numerical integration tolerance.
+  real(dp), public, parameter :: TOL_QUAD = 1d-12
 
-	!! Limit opening tolerance for definite numerical integration.
-	real(dp), public, parameter :: TOL_LIMIT = 1d-12
+  !! Limit opening tolerance for definite numerical integration.
+  real(dp), public, parameter :: TOL_LIMIT = 1d-12
 
-	!! Tolerance for floor and ceiling functions.
-	real(dp), public, parameter :: TOL_CEIL = 1d-5
-	
+  !! Tolerance for floor and ceiling functions.
+  real(dp), public, parameter :: TOL_CEIL = 1d-5
+
 
 
   ! --------------------------------------
