@@ -1,5 +1,4 @@
 # Makefile for s2dw library
-# Jason McEwen
 
 
 # ======== COMPILER ========
@@ -12,7 +11,7 @@ ifeq ($(FC),f95)
   OPTF95 = -w=x95
 endif
 
-OPT = $(OPTF95) -m64
+OPT = $(OPTF95) -m64 -O3 -DS2DW_VERSION=\"1.0b1\" -DS2DW_BUILD=\"`svnversion -n .`\" 
 
 
 # ======== LINKS ========
@@ -69,7 +68,7 @@ ifeq ($(FC),f95)
 else ifeq ($(FC),g95)
   PPFLAGS = -cpp $(OPT)
 else ifeq ($(FC),gfortran)
-  PPFLAGS = -x f95-cpp-input $(OPT)
+  PPFLAGS = -cpp $(OPT)
 endif
 
 
@@ -95,7 +94,13 @@ test:    $(S2DWBIN)/s2dw_test
 runtest: test
 	$(S2DWBIN)/s2dw_test 64
 
-prog:    $(S2DWBIN)/s2dw_wav2sky $(S2DWBIN)/s2dw_analysis $(S2DWBIN)/s2dw_synthesis $(S2DWBIN)/s2dw_wavplot $(S2DWBIN)/s2dw_mat2fits $(S2DWBIN)/s2dw_fits2mat
+prog:    $(S2DWBIN)/s2dw_wav2sky   \
+         $(S2DWBIN)/s2dw_analysis  \
+         $(S2DWBIN)/s2dw_synthesis \
+         $(S2DWBIN)/s2dw_wavplot   \
+         $(S2DWBIN)/s2dw_mat2fits  \
+         $(S2DWBIN)/s2dw_fits2mat  \
+         $(S2DWBIN)/s2dw_about
 
 $(S2DWINC)/%.o: $(S2DWSRC)/%.f90
 	$(FC) $(FFLAGS) $(PPFLAGS) -c $< -o $@ 
@@ -204,4 +209,9 @@ $(S2DWBIN)/s2dw_fits2mat:       $(S2DWINC)/s2dw_fits2mat.o
 	-o $(S2DWBIN)/s2dw_fits2mat                       \
 	$(S2DWINC)/s2dw_fits2mat.o $(LDFLAGSPROG) $(LDFLAGS) $(PPFLAGS)
 
+$(S2DWINC)/s2dw_about.o:     $(S2DWPROG)/s2dw_about.f90 lib
+$(S2DWBIN)/s2dw_about:       $(S2DWINC)/s2dw_about.o
+	$(FC)                                          \
+	-o $(S2DWBIN)/s2dw_about                       \
+	$(S2DWINC)/s2dw_about.o $(LDFLAGSPROG) $(LDFLAGS) $(PPFLAGS)
 
