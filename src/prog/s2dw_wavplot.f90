@@ -23,170 +23,170 @@
 
 program s2dw_wavplot
 
-	use s2dw_types_mod
-	use s2dw_error_mod
-	use s2dw_core_mod
-	use s2_sky_mod
+  use s2dw_types_mod
+  use s2dw_error_mod
+  use s2dw_core_mod
+  use s2_sky_mod
 
   implicit none
 
-	complex(dpc), allocatable :: flm(:,:)
-	complex(spc), allocatable :: flm_temp(:,:)
-	real(dp), allocatable :: K_gamma(:,:)
-	real(dp), allocatable :: Phi2(:)
-	complex(dpc), allocatable :: Slm(:,:)
-	real(dp), allocatable :: admiss(:)
-	integer :: J
-	integer :: J_max
-	integer :: B
-	integer :: N
-	integer :: bl_scoeff
-	real(dp) :: alpha
-	integer :: nside
-	type(s2_sky) :: sky
-	integer :: fail = 0, el, m, jj
-	character(len=STRING_LEN) :: filename_out
+  complex(dpc), allocatable :: flm(:,:)
+  complex(spc), allocatable :: flm_temp(:,:)
+  real(dp), allocatable :: K_gamma(:,:)
+  real(dp), allocatable :: Phi2(:)
+  complex(dpc), allocatable :: Slm(:,:)
+  real(dp), allocatable :: admiss(:)
+  integer :: J
+  integer :: J_max
+  integer :: B
+  integer :: N
+  integer :: bl_scoeff
+  real(dp) :: alpha
+  integer :: nside
+  type(s2_sky) :: sky
+  integer :: fail = 0, el, m, jj
+  character(len=STRING_LEN) :: filename_out
   real(sp), parameter :: ALPHA_CENTER = 0.0e0
   real(sp), parameter :: BETA_CENTER = pi/2.0e0
   real(sp), parameter :: GAMMA_CENTER = pi
-	logical :: rotate, admiss_pass
+  logical :: rotate, admiss_pass
 
-	jj=0
-	nside = 256
-	B = 128
-	alpha = 2d0
-	N = 3
-	filename_out = 'wav.fits'
-	rotate = .true.
+  jj=0
+  nside = 256
+  B = 128
+  alpha = 2d0
+  N = 3
+  filename_out = 'wav.fits'
+  rotate = .true.
 
-	! Parse options from command line.
-	call parse_options()
- 
-	J_max = s2dw_core_comp_Jmax(B, alpha)
-	J = J_max
+  ! Parse options from command line.
+  call parse_options()
 
-	! Check jj valid.
-	if(jj>J_max .or. jj<0) then
-		call s2dw_error(S2DW_ERROR_ARG_INVALID, 's2dw_wavplot', &
-			comment_add='Analysis depth j invalid')
-	end if
+  J_max = s2dw_core_comp_Jmax(B, alpha)
+  J = J_max
 
-	! Allocate memory.
-	allocate(flm_temp(0:B-1,0:B-1), stat=fail)
-	allocate(flm(0:B-1,0:B-1), stat=fail)
-	allocate(K_gamma(0:J,0:B-1), stat=fail)
-	allocate(Phi2(0:B-1), stat=fail)
-	allocate(Slm(0:B-1,0:N-1), stat=fail)
-	allocate(admiss(0:B-1), stat=fail)
-	if(fail /= 0) then
-		call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_wavplot')
-	end if
+  ! Check jj valid.
+  if(jj>J_max .or. jj<0) then
+     call s2dw_error(S2DW_ERROR_ARG_INVALID, 's2dw_wavplot', &
+          comment_add='Analysis depth j invalid')
+  end if
 
-	! Compute kernels, scaling function and directionality coefficients.
-	call s2dw_core_init_kernels(K_gamma, Phi2, bl_scoeff, J, B, alpha)
-	call s2dw_core_init_directionality(Slm, B, N)
-	admiss_pass = s2dw_core_admiss(admiss, K_gamma, Phi2, B, J)
-	if(.not. admiss_pass) then
-		call s2dw_error(S2DW_ERROR_ADMISS_FAIL, 's2dw_wavplot')
-	end if
+  ! Allocate memory.
+  allocate(flm_temp(0:B-1,0:B-1), stat=fail)
+  allocate(flm(0:B-1,0:B-1), stat=fail)
+  allocate(K_gamma(0:J,0:B-1), stat=fail)
+  allocate(Phi2(0:B-1), stat=fail)
+  allocate(Slm(0:B-1,0:N-1), stat=fail)
+  allocate(admiss(0:B-1), stat=fail)
+  if(fail /= 0) then
+     call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_wavplot')
+  end if
 
-	! Compute wavelet in real space.
-	do el=0,B-1
-		do m = 0,min(N-1,el)
-			flm(el,m) = K_gamma(jj,el) * Slm(el,m)
-		end do
-	end do
-	flm_temp(0:B-1,0:B-1) = flm(0:B-1,0:B-1)
-	sky = s2_sky_init(flm_temp(0:B-1,0:B-1), B-1, B-1)
-	call s2_sky_compute_map(sky, nside)
+  ! Compute kernels, scaling function and directionality coefficients.
+  call s2dw_core_init_kernels(K_gamma, Phi2, bl_scoeff, J, B, alpha)
+  call s2dw_core_init_directionality(Slm, B, N)
+  admiss_pass = s2dw_core_admiss(admiss, K_gamma, Phi2, B, J)
+  if(.not. admiss_pass) then
+     call s2dw_error(S2DW_ERROR_ADMISS_FAIL, 's2dw_wavplot')
+  end if
 
-	! Rotate to equator if required.
-	if(rotate) call s2_sky_rotate(sky, ALPHA_CENTER, BETA_CENTER, GAMMA_CENTEr)
+  ! Compute wavelet in real space.
+  do el=0,B-1
+     do m = 0,min(N-1,el)
+        flm(el,m) = K_gamma(jj,el) * Slm(el,m)
+     end do
+  end do
+  flm_temp(0:B-1,0:B-1) = flm(0:B-1,0:B-1)
+  sky = s2_sky_init(flm_temp(0:B-1,0:B-1), B-1, B-1)
+  call s2_sky_compute_map(sky, nside)
 
-	! Save wavelet fits file.
-	call s2_sky_write_map_file(sky, filename_out)
-	
-	! Free memory.
-	call s2_sky_free(sky)
-	deallocate(flm, flm_temp, K_gamma, Phi2, Slm, admiss)
+  ! Rotate to equator if required.
+  if(rotate) call s2_sky_rotate(sky, ALPHA_CENTER, BETA_CENTER, GAMMA_CENTEr)
 
-	!----------------------------------------------------------------------------
+  ! Save wavelet fits file.
+  call s2_sky_write_map_file(sky, filename_out)
 
-  contains
+  ! Free memory.
+  call s2_sky_free(sky)
+  deallocate(flm, flm_temp, K_gamma, Phi2, Slm, admiss)
+
+  !----------------------------------------------------------------------------
+
+contains
 
 
-    !---------------------------------------------------------------------
-    ! parse_options
-    !
-    !! Parses the options passed when program called.
-    !
-    !!! @author J. D. McEwen (mcewen@mrao.cam.ac.uk)
-    !! @version 0.1 - November 2007
-    !
-    ! Revisions:
-    !   November 2007 - Written by Jason McEwen 
-    !---------------------------------------------------------------------
+  !---------------------------------------------------------------------
+  ! parse_options
+  !
+  !! Parses the options passed when program called.
+  !
+!!! @author J. D. McEwen (mcewen@mrao.cam.ac.uk)
+  !! @version 0.1 - November 2007
+  !
+  ! Revisions:
+  !   November 2007 - Written by Jason McEwen 
+  !---------------------------------------------------------------------
 
-    subroutine parse_options()
+  subroutine parse_options()
 
-      use extension, only: getArgument, nArguments
-     
-      implicit none
-      
-      integer :: nn, i
-      character(len=STRING_LEN) :: opt
-      character(len=STRING_LEN) :: arg
-      
-      nn = nArguments()
-     
-      do i = 1,nn,2
-        
-        call getArgument(i,opt)
-     
-        if (i == nn .and. trim(opt) /= '-help') then
+    use extension, only: getArgument, nArguments
+
+    implicit none
+
+    integer :: nn, i
+    character(len=STRING_LEN) :: opt
+    character(len=STRING_LEN) :: arg
+
+    nn = nArguments()
+
+    do i = 1,nn,2
+
+       call getArgument(i,opt)
+
+       if (i == nn .and. trim(opt) /= '-help') then
           write(*,*) 'Error: Option ', trim(opt), ' has no argument'
           stop
-        end if
-     
-        if(trim(opt) /= '-help') call getArgument(i+1,arg)
+       end if
 
-        ! Read each argument in turn
-        select case (trim(opt))
-  
-          case ('-help')
-            write(*,'(a)') 'Usage: s2dw_wavplot [-nside nside]'
-            write(*,'(a)') '                   [-jj jj]'
-            write(*,'(a)') '                   [-alpha alpha]'
-            write(*,'(a)') '                   [-B B]'
-            write(*,'(a)') '                   [-N N]'
-            write(*,'(a)') '                   [-out filename_out]'
-            stop
-          
-          case ('-nside')
-            read(arg,*) nside
+       if(trim(opt) /= '-help') call getArgument(i+1,arg)
 
-          case ('-jj')
-            read(arg,*) jj
+       ! Read each argument in turn
+       select case (trim(opt))
 
-          case ('-alpha')
-            read(arg,*) alpha
+       case ('-help')
+          write(*,'(a)') 'Usage: s2dw_wavplot [-nside nside]'
+          write(*,'(a)') '                   [-jj jj]'
+          write(*,'(a)') '                   [-alpha alpha]'
+          write(*,'(a)') '                   [-B B]'
+          write(*,'(a)') '                   [-N N]'
+          write(*,'(a)') '                   [-out filename_out]'
+          stop
 
-          case ('-B')
-            read(arg,*) B
+       case ('-nside')
+          read(arg,*) nside
 
-          case ('-N')
-            read(arg,*) N
+       case ('-jj')
+          read(arg,*) jj
 
-          case ('-out')
-            filename_out = trim(arg)
+       case ('-alpha')
+          read(arg,*) alpha
 
-          case default
-            print '("unknown option ",a4," ignored")', opt            
+       case ('-B')
+          read(arg,*) B
 
-        end select
-      end do
+       case ('-N')
+          read(arg,*) N
 
-    end subroutine parse_options
+       case ('-out')
+          filename_out = trim(arg)
+
+       case default
+          print '("unknown option ",a4," ignored")', opt            
+
+       end select
+    end do
+
+  end subroutine parse_options
 
 
 end program s2dw_wavplot

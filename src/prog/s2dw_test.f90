@@ -25,7 +25,7 @@ program s2dw_test
 
   implicit none
 
-	 interface
+  interface
      subroutine s2dw_test_gen_flm(L, flm, seed)
        use s2dw_types_mod, only: dpc
        implicit none
@@ -35,133 +35,133 @@ program s2dw_test
      end subroutine s2dw_test_gen_flm
   end interface
 
-	character(len=64) :: arg
-	integer, parameter :: N_repeat = 1
-	integer :: B
-	integer :: N
-	real(dp) :: alpha
-	integer :: J
-	integer :: J_max
-	integer :: bl_scoeff
-	integer :: fail = 0, seed, i_repeat
-	real(dp) :: error_flm(0:N_repeat-1)
-	logical :: admiss_pass
-	real :: time_start, time_end
-	real :: durations_analysis(0:N_repeat-1)
-	real :: durations_synthesis(0:N_repeat-1)
+  character(len=64) :: arg
+  integer, parameter :: N_repeat = 1
+  integer :: B
+  integer :: N
+  real(dp) :: alpha
+  integer :: J
+  integer :: J_max
+  integer :: bl_scoeff
+  integer :: fail = 0, seed, i_repeat
+  real(dp) :: error_flm(0:N_repeat-1)
+  logical :: admiss_pass
+  real :: time_start, time_end
+  real :: durations_analysis(0:N_repeat-1)
+  real :: durations_synthesis(0:N_repeat-1)
 
-	complex(dpc), allocatable :: flm_orig(:,:), flm_syn(:,:)
-	real(dp), allocatable :: K_gamma(:,:)
-	real(dp), allocatable :: Phi2(:)
-	complex(dpc), allocatable :: Slm(:,:)
-	real(dp), allocatable :: admiss(:)
+  complex(dpc), allocatable :: flm_orig(:,:), flm_syn(:,:)
+  real(dp), allocatable :: K_gamma(:,:)
+  real(dp), allocatable :: Phi2(:)
+  complex(dpc), allocatable :: Slm(:,:)
+  real(dp), allocatable :: admiss(:)
   type(s2dw_wav_abg), allocatable :: wavdyn(:)
-!  real(dp), allocatable :: wav(:,:,:,:)
-	complex(dpc), allocatable :: scoeff(:,:)
+  !  real(dp), allocatable :: wav(:,:,:,:)
+  complex(dpc), allocatable :: scoeff(:,:)
 
-	! Initialise parameters.
-	call getarg(1, arg)
-	read(arg,*) B
-	!B = 32
-	N = 3
-	alpha = 2d0	
-	J_max = s2dw_core_comp_Jmax(B, alpha)
-	J = J_max
-	seed = 1
+  ! Initialise parameters.
+  call getarg(1, arg)
+  read(arg,*) B
+  !B = 32
+  N = 3
+  alpha = 2d0	
+  J_max = s2dw_core_comp_Jmax(B, alpha)
+  J = J_max
+  seed = 1
 
-	! Allocate memory.
-	allocate(flm_orig(0:B-1, 0:B-1), stat=fail)
-	allocate(flm_syn(0:B-1, 0:B-1), stat=fail)
-	allocate(K_gamma(0:J,0:B-1), stat=fail)
-	allocate(Phi2(0:B-1), stat=fail)
-	allocate(Slm(0:B-1,0:N-1), stat=fail)
-	allocate(admiss(0:B-1), stat=fail)
-!	allocate(wav(0:J, 0:2*B-2, 0:2*B-1, 0:N-1), stat=fail)
-	if(fail /= 0) then
-		call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_test')
-	end if
+  ! Allocate memory.
+  allocate(flm_orig(0:B-1, 0:B-1), stat=fail)
+  allocate(flm_syn(0:B-1, 0:B-1), stat=fail)
+  allocate(K_gamma(0:J,0:B-1), stat=fail)
+  allocate(Phi2(0:B-1), stat=fail)
+  allocate(Slm(0:B-1,0:N-1), stat=fail)
+  allocate(admiss(0:B-1), stat=fail)
+  !	allocate(wav(0:J, 0:2*B-2, 0:2*B-1, 0:N-1), stat=fail)
+  if(fail /= 0) then
+     call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_test')
+  end if
 
-	write(*,*)
-	write(*,'(a)') 'S2DW test program'
-	write(*,'(a)') '================'
-	write(*,*)
+  write(*,*)
+  write(*,'(a)') 'S2DW test program'
+  write(*,'(a)') '================'
+  write(*,*)
 
-	do i_repeat = 0,N_repeat-1
+  do i_repeat = 0,N_repeat-1
 
-		! Generate harmonic coefficients of random test signal.
-		call s2dw_test_gen_flm(B-1, flm_orig, seed)
-	
-		! Compute kernels, scaling function and directionality coefficients.
-		write(*,'(a,i2)') 'Initialisation no.', i_repeat
-		call cpu_time(time_start)
-		call s2dw_core_init_kernels(K_gamma, Phi2, bl_scoeff, J, B, alpha)
-		call s2dw_core_init_directionality(Slm, B, N)
-		admiss_pass = s2dw_core_admiss(admiss, K_gamma, Phi2, B, J)
-		if(.not. admiss_pass) then
-			call s2dw_error(S2DW_ERROR_ADMISS_FAIL, 's2dw_test')
-		end if
-		call cpu_time(time_end)
-		write(*,'(a,f43.2)') ' duration =', time_end - time_start
+     ! Generate harmonic coefficients of random test signal.
+     call s2dw_test_gen_flm(B-1, flm_orig, seed)
 
-		! Allocate memory for scaling coefficients (cannot be done earlier 
-		! since don't know bl_scoeff).
-		allocate(scoeff(0:bl_scoeff-1, 0:bl_scoeff-1), stat=fail)
-		if(fail /= 0) then
-			call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_test')
-		end if
-	
-		! Compute wavelet and scaling coefficients.
-		write(*,'(a,i2)') 'Analysis no.', i_repeat
-		call cpu_time(time_start)
-		call s2dw_core_analysis_flm2wav_dynamic(wavdyn, scoeff, flm_orig, K_gamma, Slm, &
-			J, B, N, bl_scoeff, alpha)
-!		call s2dw_core_analysis_flm2wav(wav, scoeff, flm_orig, K_gamma, Slm, &
-!			J, B, N, bl_scoeff, alpha)
-		call cpu_time(time_end)
-		durations_analysis(i_repeat) = time_end - time_start
-		write(*,'(a,f43.2)') ' duration =', durations_analysis(i_repeat)
+     ! Compute kernels, scaling function and directionality coefficients.
+     write(*,'(a,i2)') 'Initialisation no.', i_repeat
+     call cpu_time(time_start)
+     call s2dw_core_init_kernels(K_gamma, Phi2, bl_scoeff, J, B, alpha)
+     call s2dw_core_init_directionality(Slm, B, N)
+     admiss_pass = s2dw_core_admiss(admiss, K_gamma, Phi2, B, J)
+     if(.not. admiss_pass) then
+        call s2dw_error(S2DW_ERROR_ADMISS_FAIL, 's2dw_test')
+     end if
+     call cpu_time(time_end)
+     write(*,'(a,f43.2)') ' duration =', time_end - time_start
 
-		! Synthesis harmonic coefficients of signal from wavelet and scaling 
-		! coefficients.
-		write(*,'(a,i2)') 'Synthesis no.', i_repeat
-		call cpu_time(time_start)
-		call s2dw_core_synthesis_wav2flm_dynamic(flm_syn, wavdyn, scoeff, K_gamma, Phi2, &
-				Slm, J, B, N, bl_scoeff, alpha)
-!		call s2dw_core_synthesis_wav2flm(flm_syn, wav, scoeff, K_gamma, Phi2, &
-!				Slm, J, B, N, bl_scoeff, alpha)
-		call cpu_time(time_end)
-		durations_synthesis(i_repeat) = time_end - time_start
-		write(*,'(a,f43.2)') ' duration =', durations_synthesis(i_repeat)
-	
-		error_flm(i_repeat) = maxval(abs(flm_orig(0:B-1,0:B-1) - flm_syn(0:B-1,0:B-1)))
-		write(*,'(a,e43.5)') ' error =   ', error_flm(i_repeat)
-		write(*,*)
+     ! Allocate memory for scaling coefficients (cannot be done earlier 
+     ! since don't know bl_scoeff).
+     allocate(scoeff(0:bl_scoeff-1, 0:bl_scoeff-1), stat=fail)
+     if(fail /= 0) then
+        call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_test')
+     end if
 
-		deallocate(scoeff)
+     ! Compute wavelet and scaling coefficients.
+     write(*,'(a,i2)') 'Analysis no.', i_repeat
+     call cpu_time(time_start)
+     call s2dw_core_analysis_flm2wav_dynamic(wavdyn, scoeff, flm_orig, K_gamma, Slm, &
+          J, B, N, bl_scoeff, alpha)
+     !		call s2dw_core_analysis_flm2wav(wav, scoeff, flm_orig, K_gamma, Slm, &
+     !			J, B, N, bl_scoeff, alpha)
+     call cpu_time(time_end)
+     durations_analysis(i_repeat) = time_end - time_start
+     write(*,'(a,f43.2)') ' duration =', durations_analysis(i_repeat)
 
-	end do
+     ! Synthesis harmonic coefficients of signal from wavelet and scaling 
+     ! coefficients.
+     write(*,'(a,i2)') 'Synthesis no.', i_repeat
+     call cpu_time(time_start)
+     call s2dw_core_synthesis_wav2flm_dynamic(flm_syn, wavdyn, scoeff, K_gamma, Phi2, &
+          Slm, J, B, N, bl_scoeff, alpha)
+     !		call s2dw_core_synthesis_wav2flm(flm_syn, wav, scoeff, K_gamma, Phi2, &
+     !				Slm, J, B, N, bl_scoeff, alpha)
+     call cpu_time(time_end)
+     durations_synthesis(i_repeat) = time_end - time_start
+     write(*,'(a,f43.2)') ' duration =', durations_synthesis(i_repeat)
 
-	write(*,'(a)') 'Summary:'
-	write(*,'(a,i30)') 'N_repeat               =', N_repeat
-	write(*,'(a,i30)') 'B                      =', B
-	write(*,'(a,i30)') 'N                      =', N
-	write(*,'(a,i30)') 'J                      =', J	
-	write(*,'(a,f30.5)') 'alpha                  =', alpha
-	write(*,'(a,f30.5)') 'Average analysis time  =', sum(durations_analysis(0:N_repeat-1)) / real(N_repeat)
-	write(*,'(a,f30.5)') 'Average synthesis time =', sum(durations_synthesis(0:N_repeat-1)) / real(N_repeat)
-	write(*,'(a,e30.5)') 'Average max error      =', sum(error_flm(0:N_repeat-1)) / real(N_repeat)
-	write(*,*)
+     error_flm(i_repeat) = maxval(abs(flm_orig(0:B-1,0:B-1) - flm_syn(0:B-1,0:B-1)))
+     write(*,'(a,e43.5)') ' error =   ', error_flm(i_repeat)
+     write(*,*)
 
-	if( abs(sum(error_flm(0:N_repeat-1)) / real(N_repeat)) < 1d-6) then
-		write(*,'(a)') 'Tests passed!'
-	else
-		write(*,'(a)') 'Tests failed!'
-	end if 
-	write(*,*) 
+     deallocate(scoeff)
 
-	! Deallocate memory.
-	deallocate(flm_orig, flm_syn, K_gamma, Phi2, Slm, admiss)
-!  deallocate(wav)
+  end do
+
+  write(*,'(a)') 'Summary:'
+  write(*,'(a,i30)') 'N_repeat               =', N_repeat
+  write(*,'(a,i30)') 'B                      =', B
+  write(*,'(a,i30)') 'N                      =', N
+  write(*,'(a,i30)') 'J                      =', J	
+  write(*,'(a,f30.5)') 'alpha                  =', alpha
+  write(*,'(a,f30.5)') 'Average analysis time  =', sum(durations_analysis(0:N_repeat-1)) / real(N_repeat)
+  write(*,'(a,f30.5)') 'Average synthesis time =', sum(durations_synthesis(0:N_repeat-1)) / real(N_repeat)
+  write(*,'(a,e30.5)') 'Average max error      =', sum(error_flm(0:N_repeat-1)) / real(N_repeat)
+  write(*,*)
+
+  if( abs(sum(error_flm(0:N_repeat-1)) / real(N_repeat)) < 1d-6) then
+     write(*,'(a)') 'Tests passed!'
+  else
+     write(*,'(a)') 'Tests failed!'
+  end if
+  write(*,*) 
+
+  ! Deallocate memory.
+  deallocate(flm_orig, flm_syn, K_gamma, Phi2, Slm, admiss)
+  !  deallocate(wav)
 
 end program s2dw_test
 
@@ -247,7 +247,7 @@ function ran2_dp(idum)
 
   use s2dw_types_mod, only: dp
 
-	implicit none
+  implicit none
 
   INTEGER :: idum,IM1,IM2,IMM1,IA1,IA2,IQ1,IQ2,IR1,IR2,NTAB,NDIV
   REAL(dp) :: ran2_dp,AM,EPS,RNMX
@@ -280,6 +280,6 @@ function ran2_dp(idum)
   if(iy.lt.1)iy=iy+IMM1
   ran2_dp=min(AM*iy,RNMX)
   return
-  
+
 end function ran2_dp
-   
+

@@ -36,60 +36,60 @@ program s2dw_about
   write(*,'(a)') "=========================================================="
 
 
- !----------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
 
-  contains
+contains
 
 
-    !---------------------------------------------------------------------
-    ! parse_options
-    !
-    !! Parse the options passed when program called.
-    !
-    !! @author J. D. McEwen (mcewen@mrao.cam.ac.uk)
-    !! @version 0.1 - November 2004
-    !
-    ! Revisions:
-    !   November 2004 - Written by Jason McEwen 
-    !---------------------------------------------------------------------
+  !---------------------------------------------------------------------
+  ! parse_options
+  !
+  !! Parse the options passed when program called.
+  !
+  !! @author J. D. McEwen (mcewen@mrao.cam.ac.uk)
+  !! @version 0.1 - November 2004
+  !
+  ! Revisions:
+  !   November 2004 - Written by Jason McEwen 
+  !---------------------------------------------------------------------
 
-    subroutine parse_options()
+  subroutine parse_options()
 
-      use extension, only: getArgument, nArguments
-     
-      implicit none
-      
-      integer :: n, i
-      character(len=STRING_LEN) :: opt
-      character(len=STRING_LEN) :: arg
-      
-      n = nArguments()
-     
-      do i = 1,n,2
-        
-        call getArgument(i,opt)
-     
-        if (i == n .and. trim(opt) /= '-help') then
+    use extension, only: getArgument, nArguments
+
+    implicit none
+
+    integer :: n, i
+    character(len=STRING_LEN) :: opt
+    character(len=STRING_LEN) :: arg
+
+    n = nArguments()
+
+    do i = 1,n,2
+
+       call getArgument(i,opt)
+
+       if (i == n .and. trim(opt) /= '-help') then
           write(*,'(a,a,a)') 'Option ', trim(opt), ' has no argument'
           stop
-        end if
-     
-        if(trim(opt) /= '-help') call getArgument(i+1,arg)
+       end if
 
-        ! Read each argument in turn
-        select case (trim(opt))
-  
-          case ('-help')
-            write(*,'(a)') 'Usage: s2dw_about'
-            stop
+       if(trim(opt) /= '-help') call getArgument(i+1,arg)
 
-          case default
-            print '("Unknown option ",a," ignored")', trim(opt)            
+       ! Read each argument in turn
+       select case (trim(opt))
 
-        end select
-      end do
+       case ('-help')
+          write(*,'(a)') 'Usage: s2dw_about'
+          stop
 
-    end subroutine parse_options
+       case default
+          print '("Unknown option ",a," ignored")', trim(opt)            
+
+       end select
+    end do
+
+  end subroutine parse_options
 
 
 end program s2dw_about
