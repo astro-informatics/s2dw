@@ -878,8 +878,9 @@ contains
        end if
        Umnb(0:bl_hi-1, 0:N-1, 0:2*bl_hi-1) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(gg, mmm, bl_hi, N, Umnb, V) &
-       !$omp private(gamma_g, k_indicator)
+       !$omp shared(gg, mmm, bl_hi, N, V) &
+       !$omp private(gamma_g, k_indicator) &
+       !$omp reduction(+: Umnb)
        !$omp do schedule(dynamic,1) collapse(2)
        do gg = 0,N-1
           do mmm = 0,N-1  	
