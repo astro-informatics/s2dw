@@ -447,9 +447,8 @@ contains
        end if
        Tmmg(0:bl_hi-1, 0:bl_hi-1, 0:N-1) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(Tmmm, gg, mm, bl_hi, N) &
-       !$omp private(m, gamma_g, mmm, k_indicator) &
-       !$omp reduction(+: Tmmg)
+       !$omp shared(Tmmm, gg, mm, bl_hi, N, Tmmg) &
+       !$omp private(m, gamma_g, mmm, k_indicator)
        !$omp do schedule(dynamic,10) collapse(2)
        do gg = 0,N-1
           do mm = 0,bl_hi-1
@@ -476,9 +475,8 @@ contains
        end if
        Tmbg(0:bl_hi-1, 0:2*bl_hi-1, 0:N-1) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(Tmmg, gg, bb, bl_hi, N) &
-       !$omp private(m, mm, beta_b, gamma_g, eta) &
-       !$omp reduction(+: Tmbg)
+       !$omp shared(Tmmg, gg, bb, bl_hi, N, Tmbg) &
+       !$omp private(m, mm, beta_b, gamma_g, eta)
        !$omp do schedule(dynamic,10) collapse(2)
        do gg = 0,N-1
           do bb = 0,2*bl_hi-1
@@ -500,7 +498,6 @@ contains
                         + Tmmg(m, mm, gg) * eta
 
                 end do
-
              end do
           end do
        end do
@@ -827,8 +824,7 @@ contains
     !complex(dpc), allocatable :: Ummp(:,:,:)
     complex(dpc), allocatable :: Umnb(:,:,:)
 
-    complex(dpc) :: Ua(0:B-1)  ! Temp memory required to solve FFTW bug
-    real(dp) :: Wa(0:2*B-2)    ! Temp memory required to solve FFTW bug
+    real(dp) :: Wa(0:2*B-2) 
     real(dp), allocatable :: dl(:,:)
     integer*8 :: fftw_plan
 
@@ -857,17 +853,22 @@ contains
                's2dw_core_synthesis_wav2flm')
        end if
        V(0:bl_hi-1, 0:2*bl_hi-1, 0:N-1) = cmplx(0d0,0d0)
-       do bb = 0,2*bl_hi-1
-          do gg = 0,N-1
-             Wa(0:2*bl_hi-2) = wav(jj,0:2*bl_hi-2,bb,gg)
-             call dfftw_plan_dft_r2c_1d(fftw_plan, 2*bl_hi-1, &
-                  Wa(0:2*bl_hi-2), Ua(0:bl_hi-1), FFTW_ESTIMATE)
-             call dfftw_execute(fftw_plan)
-             call dfftw_destroy_plan(fftw_plan)
-             V(0:bl_hi-1,bb,gg) = Ua(0:bl_hi-1) &
+       call dfftw_plan_dft_r2c_1d(fftw_plan, 2*bl_hi-1, &
+            Wa(0:2*bl_hi-2), V(0:bl_hi-1,0,0), FFTW_MEASURE)
+       !$omp parallel default(none) &
+       !$omp shared(gg, bb, fftw_plan, wav, jj, V, bl_hi, N)
+       !$omp do schedule(dynamic,10) collapse(2)
+       do gg = 0,N-1
+          do bb = 0,2*bl_hi-1
+             call dfftw_execute_dft_r2c(fftw_plan, &
+                  wav(jj,0:2*bl_hi-2,bb,gg), V(0:bl_hi-1,bb,gg))
+             V(0:bl_hi-1,bb,gg) = V(0:bl_hi-1,bb,gg) &
                   * (4d0*PI**2/real(N,dp)) / (2d0*bl_hi-1d0) 
           end do
        end do
+       !$omp end do
+       !$omp end parallel
+       call dfftw_destroy_plan(fftw_plan)
        ! Could delete wavelet coefficients here.
 
        ! Step 2a: Integerate over gamma (i.e. compute Umnb)	
@@ -876,9 +877,13 @@ contains
           call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_core_synthesis_wav2flm')
        end if
        Umnb(0:bl_hi-1, 0:N-1, 0:2*bl_hi-1) = cmplx(0d0, 0d0)
+       !$omp parallel default(none) &
+       !$omp shared(gg, mmm, bl_hi, N, Umnb, V) &
+       !$omp private(gamma_g, k_indicator)
+       !$omp do schedule(dynamic,1) collapse(2)
        do gg = 0,N-1
-          gamma_g = PI*gg/real(N,dp)
           do mmm = 0,N-1  	
+             gamma_g = PI*gg/real(N,dp)
              k_indicator = (1-(-1)**(N+mmm))/2 
              if(k_indicator > 0) then
                 Umnb(0:bl_hi-1,mmm,0:2*bl_hi-1) = &
@@ -887,13 +892,20 @@ contains
              end if
           end do
        end do
+       !$omp end do
+       !$omp end parallel
 
        ! Step 2b: Integrate over beta	(i.e. compute Vmmm)
        V(0:bl_hi-1, 0:2*bl_hi-2, 0:N-1) = cmplx(0d0, 0d0)
+       !$omp parallel default(none) &
+       !$omp shared(mmm, bb, bl_hi, N, Umnb) &
+       !$omp private(beta_b, w, k_indicator, mm) &
+       !$omp reduction(+: V)
+       !$omp do schedule(dynamic,10) collapse(2)
        do bb = 0,2*bl_hi-1
-          beta_b = PI*(2d0*bb+1d0)/(4d0*bl_hi)
-          w = quad_weights(beta_b, bl_hi)
           do mmm = 0,N-1
+             beta_b = PI*(2d0*bb+1d0)/(4d0*bl_hi)
+             w = quad_weights(beta_b, bl_hi)
              k_indicator = (1-(-1)**(N+mmm))/2 
              if(k_indicator > 0) then
                 do mm = -(bl_hi-1),bl_hi-1  
@@ -903,20 +915,28 @@ contains
              end if
           end do
        end do
+       !$omp end do
+       !$omp end parallel
        deallocate(Umnb)
 
        ! Step 3a: Combine Vmmm terms for m' and -m' outside of el sum
+       !$omp parallel default(none) &
+       !$omp shared(mmm, m, bl_hi, N, V) &
+       !$omp private(k_indicator, mm)
+       !$omp do schedule(dynamic,10) collapse(2)       
        do mmm = 0,N-1
-          k_indicator = (1-(-1)**(N+mmm))/2	
-          if(k_indicator > 0) then
-             do m = 0,bl_hi-1
-                do mm = 1,bl_hi-1    
+          do mm = 1,bl_hi-1
+             k_indicator = (1-(-1)**(N+mmm))/2	
+             if(k_indicator > 0) then
+                do m = 0,bl_hi-1
                    V(m, mm+bl_hi-1, mmm) = V(m, mm+bl_hi-1, mmm) &
                         + (-1)**(m+mmm) *  V(m, -mm+bl_hi-1, mmm) 
                 end do
-             end do
-          end if
+             end if
+          end do
        end do
+       !$omp end do
+       !$omp end parallel
 
        ! Step 3b: Compute Wigner coefficients
        allocate(wig(0:bl_hi-1, 0:bl_hi-1, 0:N-1), stat=fail)
@@ -926,10 +946,14 @@ contains
                's2dw_core_synthesis_wav2flm')
        end if
        wig(0:bl_hi-1, 0:bl_hi-1, 0:N-1) = cmplx(0d0, 0d0)
+       !$omp parallel default(none) &
+       !$omp shared(el, bl_lo, bl_hi, N, V, wig) &
+       !$omp private(dl, k_indicator, mmm, m)
+       !$omp do schedule(dynamic,10)
        do el = bl_lo+1,bl_hi-1
           call s2dw_dl_beta_operator(dl(-el:el,-el:el), PION2, el)
-          do m = 0,el
-             do mmm = 0,min(N-1,el)			
+          do mmm = 0,min(N-1,el)			
+             do m = 0,el
                 k_indicator = (1-(-1)**(N+mmm))/2 	
                 if(k_indicator > 0) then
                    wig(el,m,mmm) = sum(V(m, bl_hi-1:el+bl_hi-1, mmm)  &
@@ -938,25 +962,35 @@ contains
              end do
           end do
        end do
+       !$omp end do
+       !$omp end parallel
        deallocate(dl, V)
 
        ! Compute harmonic component (for this jj) from Wigner coefficients
+       !$omp parallel default(none) &
+       !$omp shared(el, bl_lo, bl_hi, N, wig, K_gamma, Slm, jj, flm) &
+       !$omp private(m, mmm, k_indicator)
+       !$omp do schedule(dynamic,10)
        do el = bl_lo+1,bl_hi-1
-          do m = 0,el
-             ! n=0 term
-             flm(el,m) = flm(el,m) + &
-                  (real(2d0*el+1,dp)/(8d0*pi**2)) &
-                  * wig(el,m,0) * K_gamma(jj,el) * Slm(el,0)
-             do mmm = 1,min(N-1,el)
-                k_indicator = (1-(-1)**(N+mmm))/2 						
-                if(k_indicator > 0) then
+          do mmm = 0,min(N-1,el)
+             do m = 0,el
+                if (mmm == 0) then
                    flm(el,m) = flm(el,m) + &
-                        2d0 * (real(2d0*el+1,dp)/(8*pi**2)) &
-                        * wig(el,m,mmm) * K_gamma(jj,el) * Slm(el,mmm) 
+                        (real(2d0*el+1,dp)/(8d0*pi**2)) &
+                        * wig(el,m,0) * K_gamma(jj,el) * Slm(el,0)
+                else
+                   k_indicator = (1-(-1)**(N+mmm))/2
+                   if(k_indicator > 0) then
+                      flm(el,m) = flm(el,m) + &
+                           2d0 * (real(2d0*el+1,dp)/(8*pi**2)) &
+                           * wig(el,m,mmm) * K_gamma(jj,el) * Slm(el,mmm) 
+                   end if
                 end if
              end do
           end do
        end do
+       !$omp end do
+       !$omp end parallel
        deallocate(wig)
 
     end do
