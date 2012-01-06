@@ -56,8 +56,8 @@ program s2dw_test
   real(dp), allocatable :: Phi2(:)
   complex(dpc), allocatable :: Slm(:,:)
   real(dp), allocatable :: admiss(:)
-!  type(s2dw_wav_abg), allocatable :: wavdyn(:)
-  real(dp), allocatable :: wav(:,:,:,:)
+  type(s2dw_wav_abg), allocatable :: wavdyn(:)
+!  real(dp), allocatable :: wav(:,:,:,:)
   complex(dpc), allocatable :: scoeff(:,:)
 
   ! Initialise parameters.
@@ -77,7 +77,7 @@ program s2dw_test
   allocate(Phi2(0:B-1), stat=fail)
   allocate(Slm(0:B-1,0:N-1), stat=fail)
   allocate(admiss(0:B-1), stat=fail)
-  allocate(wav(0:J, 0:2*B-2, 0:2*B-1, 0:N-1), stat=fail)
+!  allocate(wav(0:J, 0:2*B-2, 0:2*B-1, 0:N-1), stat=fail)
   if(fail /= 0) then
      call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_test')
   end if
@@ -114,10 +114,10 @@ program s2dw_test
      ! Compute wavelet and scaling coefficients.
      write(*,'(a,i2)') 'Analysis no.', i_repeat
      time_start = omp_get_wtime()
-!     call s2dw_core_analysis_flm2wav_dynamic(wavdyn, scoeff, flm_orig, K_gamma, Slm, &
-!          J, B, N, bl_scoeff, alpha)
-     call s2dw_core_analysis_flm2wav(wav, scoeff, flm_orig, K_gamma, Slm, &
+     call s2dw_core_analysis_flm2wav_dynamic(wavdyn, scoeff, flm_orig, K_gamma, Slm, &
           J, B, N, bl_scoeff, alpha)
+!     call s2dw_core_analysis_flm2wav(wav, scoeff, flm_orig, K_gamma, Slm, &
+!          J, B, N, bl_scoeff, alpha)
      time_end = omp_get_wtime()
      durations_analysis(i_repeat) = time_end - time_start
      write(*,'(a,f43.2)') ' duration =', durations_analysis(i_repeat)
@@ -126,10 +126,10 @@ program s2dw_test
      ! coefficients.
      write(*,'(a,i2)') 'Synthesis no.', i_repeat
      time_start = omp_get_wtime()
-!     call s2dw_core_synthesis_wav2flm_dynamic(flm_syn, wavdyn, scoeff, K_gamma, Phi2, &
-!          Slm, J, B, N, bl_scoeff, alpha)
-     call s2dw_core_synthesis_wav2flm(flm_syn, wav, scoeff, K_gamma, Phi2, &
+     call s2dw_core_synthesis_wav2flm_dynamic(flm_syn, wavdyn, scoeff, K_gamma, Phi2, &
           Slm, J, B, N, bl_scoeff, alpha)
+!     call s2dw_core_synthesis_wav2flm(flm_syn, wav, scoeff, K_gamma, Phi2, &
+!          Slm, J, B, N, bl_scoeff, alpha)
      time_end = omp_get_wtime()
      durations_synthesis(i_repeat) = time_end - time_start
      write(*,'(a,f43.2)') ' duration =', durations_synthesis(i_repeat)
@@ -162,7 +162,7 @@ program s2dw_test
 
   ! Deallocate memory.
   deallocate(flm_orig, flm_syn, K_gamma, Phi2, Slm, admiss)
-  !  deallocate(wav)
+!  deallocate(wav)
 
 end program s2dw_test
 
