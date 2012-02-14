@@ -161,8 +161,8 @@ contains
 
        case ('-help')
           write(*,'(a)') 'Usage: s2dw_synthesis [-inp filename_in]'
-          write(*,'(a)') '                     [-out filename_out]'
-          write(*,'(a)') '                     [-file_type file_type (fits; m)]'
+          write(*,'(a)') '                      [-out filename_out]'
+          write(*,'(a)') '                      [-file_type file_type (fits; m)]'
           stop
 
        case ('-inp')

@@ -18,6 +18,7 @@
 !!     containing wavelet and scaling coefficients.
 !!   - [-file_type file_type (fits; m)]: String specifying type of output 
 !!     S2DW file to write  (fits or matlab m) [default=fits].
+!!   - [-B B]: Harmonic band limit (if not specified set to 2*nside).
 !!   - [-N N]: Azimuthal band limit [default=3].
 !!   - [-alpha alpha]: Basis dilation factor [default=2].
 !!   - [-J J]: Maximum analysis scale (optional) [default=Jmax].
@@ -50,6 +51,7 @@ program s2dw_analysis
   integer :: J
   integer :: J_max
   integer :: B
+  logical :: B_in = .false.
   integer :: N
   integer :: bl_scoeff
   real(dp) :: alpha
@@ -79,7 +81,7 @@ program s2dw_analysis
   ! Read sky.
   sky = s2_sky_init(filename_in, file_extension)
   nside = s2_sky_get_nside(sky)
-  B = 2*nside
+  if (.not. B_in) B = 2*nside
   J_max = ceiling(log(real(B,dp))/log(alpha) - TOL_CEIL)
   if(use_Jmax) J = J_max
   if(J > J_max) then
@@ -191,11 +193,12 @@ contains
 
        case ('-help')
           write(*,'(a)') 'Usage: s2dw_analysis [-inp filename_in]'
-          write(*,'(a)') '                    [-out filename_out]'
-          write(*,'(a)') '                    [-file_type file_type (fits; m)]'
-          write(*,'(a)') '                    [-N N]'  
-          write(*,'(a)') '                    [-alpha alpha]' 
-          write(*,'(a)') '                    [-J J]'
+          write(*,'(a)') '                     [-out filename_out]'
+          write(*,'(a)') '                     [-file_type file_type (fits; m)]'
+          write(*,'(a)') '                     [-B B]'  
+          write(*,'(a)') '                     [-N N]'  
+          write(*,'(a)') '                     [-alpha alpha]' 
+          write(*,'(a)') '                     [-J J]'
           stop
 
        case ('-inp')
@@ -206,6 +209,10 @@ contains
 
        case ('-file_type')
           file_type = trim(arg)
+
+       case ('-B')
+          read(arg,*) B
+          B_in = .true.
 
        case ('-N')
           read(arg,*) N
