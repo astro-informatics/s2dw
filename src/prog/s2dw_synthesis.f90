@@ -18,6 +18,8 @@
 !!   - [-out filename_out]: Name of output Healpix sky fits map.
 !!   - [-file_type file_type (fits; m)]: String specifying type of input 
 !!     S2DW file to read  (fits or matlab m file) [default=fits].
+!!   - [-nside nside]: Resolution of output Healpix map (if not specified 
+!!     then set to B/2).
 !     
 !! @author J. D. McEwen (mcewen@mrao.cam.ac.uk)
 !! @version 0.1 - November 2007
@@ -50,6 +52,7 @@ program s2dw_synthesis
   integer :: bl_scoeff
   real(dp) :: alpha
   integer :: nside
+  logical :: nside_in = .false.
   logical :: admiss_pass
   type(s2_sky) :: sky
   integer :: fail = 0
@@ -103,7 +106,7 @@ program s2dw_synthesis
        Slm, J, B, N, bl_scoeff, alpha)
 
   ! Reconstruct real space sky from spherical harmonic coefficients.
-  nside = B/2
+  if (.not. nside_in) nside = B/2
   flm_temp(0:B-1,0:B-1) = flm(0:B-1,0:B-1)
   sky = s2_sky_init(flm_temp(0:B-1,0:B-1), B-1, B-1)
   call s2_sky_compute_map(sky, nside)
@@ -163,6 +166,7 @@ contains
           write(*,'(a)') 'Usage: s2dw_synthesis [-inp filename_in]'
           write(*,'(a)') '                      [-out filename_out]'
           write(*,'(a)') '                      [-file_type file_type (fits; m)]'
+          write(*,'(a)') '                      [-nside nside]'
           stop
 
        case ('-inp')
@@ -174,8 +178,12 @@ contains
        case ('-file_type')
           file_type = trim(arg)
 
+       case ('-nside')
+          read(arg,*) nside
+          nside_in = .true.
+
        case default
-          print '("unknown option ",a4," ignored")', opt            
+          print '("unknown option ",a4," ignored")', trim(opt)            
 
        end select
     end do
