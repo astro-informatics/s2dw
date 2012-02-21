@@ -244,7 +244,7 @@ contains
           read(arg,*) all
 
        case default
-          print '("unknown option ",a4," ignored")', opt            
+          print '("unknown option ",a," ignored")', trim(opt)
 
        end select
     end do

@@ -27,8 +27,9 @@ module s2dw_stat_mod
   !---------------------------------------
 
   public :: &
-       s2dw_stat_moments
-     
+       s2dw_stat_moments, &
+       s2dw_stat_moments_write
+
 
   !----------------------------------------------------------------------------
 
@@ -145,7 +146,7 @@ contains
           call s2dw_error(S2DW_ERROR_ARTH_WARNING, 's2dw_stat_moments', &
                'Skewness/kurtosis undefined when variance zero')
           skew(jj) = 0d0
-          kur(jj) = -3d0
+          kur(jj) = 0d0
        else
           skew(jj) = skew(jj) / (nj * sdev**3)
           kur(jj) = kur(jj) / (nj * var(jj)**2) - 3d0
@@ -159,6 +160,81 @@ contains
     !$omp end parallel
 
   end subroutine s2dw_stat_moments
+
+
+  !--------------------------------------------------------------------------
+  ! s2dw_stat_moments_write
+  !
+  !! Write moments of wavelets coefficients for each scale, including
+  !! the mean, variance, skewness and kurtosis.  Moments are written
+  !! to a single line (ordered mean, variance, skewness and kurtosis)
+  !! for each set of wavelet coefficients.
+  !!
+  !! Variables:
+  !!  - filename: Name of file to write wavelet coefficient moments to 
+  !!    [input].
+  !!  - nsim: Number of sets of wavelet coefficient moments, i.e. number 
+  !!    of skies/maps analysed [input].
+  !!  - description(0:nsim-1): Description of each set of wavelet
+  !!    coefficients stats, typically a filename [input].
+  !!  - J: Maximum analysis scale depth [input].
+  !!  - mean(0:nsim-1,0:J): Mean of wavelet coefficients for each map
+  !!    and scale [input].
+  !!  - var(0:nsim-1,0:J): Variance of wavelet coefficients for each
+  !!    map and scale [input].
+  !!  - skew(0:nsim-1,0:J): Skewness of wavelet coefficients for each
+  !!    map and scale [input].
+  !!  - kur(0:nsim-1,0:J): Kurtosis of wavelet coefficients for each
+  !!    map and scale [input].
+  !
+  !! @author J. D. McEwen
+  !! @version 0.1 February 2012
+  !
+  ! Revisions:
+  !   February 2012 - Written by Jason McEwen
+  !--------------------------------------------------------------------------
+
+  subroutine s2dw_stat_moments_write(filename, nsim, description, &
+       J, mu, var, skew, kur)
+
+    character(len=*), intent(in) :: filename
+    integer, intent(in) :: nsim
+    character(len=STRING_LEN), intent(in) :: description(0:nsim-1)
+    integer, intent(in) :: J
+    real(dp), intent(in) :: mu(0:nsim-1,0:J)
+    real(dp), intent(in) :: var(0:nsim-1,0:J)
+    real(dp), intent(in) :: skew(0:nsim-1,0:J)
+    real(dp), intent(in) :: kur(0:nsim-1,0:J)
+
+    integer :: fileid = 10, isim, jj
+
+    ! Open file for writing.
+    open(fileid, file=filename, form='formatted', &
+         status='replace', action='write')
+
+    ! Write statistics.
+    do isim = 0, nsim-1
+       write(fileid, '(a,a)', advance='no') trim(description(isim)), ', '
+       write(fileid, '(i4,a)', advance='no') J, ', '
+       do jj = 0, J
+          write(fileid, '(e27.20,a)', advance='no')  mu(isim,jj), ', '
+       end do
+       do jj = 0, J
+          write(fileid, '(e27.20,a)', advance='no')  var(isim,jj), ', '
+       end do
+       do jj = 0, J
+          write(fileid, '(e27.20,a)', advance='no')  skew(isim,jj), ', '
+       end do
+       do jj = 0, J
+          write(fileid, '(e27.20,a)', advance='no')  kur(isim,jj), ', '
+       end do
+       write(fileid,*)
+    end do
+
+    ! Close file.
+    close(fileid)
+
+  end subroutine s2dw_stat_moments_write
 
 
 end module s2dw_stat_mod

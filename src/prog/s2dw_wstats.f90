@@ -1,87 +1,65 @@
 !------------------------------------------------------------------------------
-! s2dw_analysis
+! s2dw_wstats
 !
-!! Computes the S2DW wavelet and scaling coefficients of a Healpix sky map.
+!! Compute wavelet coefficient statistics from a map (and then discard
+!! wavelet coefficients).
 !!
-!! Notes:
-!!   - The harmonic band limit B is set to 2*nside, where nside is the 
-!!     Healpix resolution parameter of the input sky map.
-!!   - The spherical harmonic transform and inverse provided by Healpix 
-!!     is not exact, hence these reduce the numerical precision of the 
-!!     `exact' reconstruction of the original real space map from its wavelet 
-!!     coefficients.
-!! 
-!! Usage: s2dw_analysis
-!!   - [-help]: Displays usage information.
-!!   - [-inp filename_in]: Name of input Healpix sky fits map.
-!!   - [-out filename_out]: Name of output S2DW formatted fits/matlab file 
-!!     containing wavelet and scaling coefficients.
-!!   - [-file_type file_type (fits; m)]: String specifying type of output 
-!!     S2DW file to write  (fits or matlab m) [default=fits].
+!! Usage: s2dw_wstats
+!!   - [-help]: Display usage information.
+!!   - [-inp filename_in]: Name of input file containing list of maps to 
+!!     compute wavelet coefficients and then statistics of.
+!!   - [-out filename_out]: Name of output statistic file.
 !!   - [-B B]: Harmonic band limit (if not specified set to 2*nside).
 !!   - [-N N]: Azimuthal band limit [default=3].
 !!   - [-alpha alpha]: Basis dilation factor [default=2].
-!!   - [-J J]: Maximum analysis scale (optional) [default=Jmax].
-!     
+!!   - [-J J]: Maximum analysis scale [default=Jmax].
+!
 !! @author J. D. McEwen (mcewen@mrao.cam.ac.uk)
-!! @version 0.1 - November 2007
 !
 ! Revisions:
-!   November 2007 - Written by Jason McEwen 
+!   November 2012 - Written by Jason McEwen
 !------------------------------------------------------------------------------
 
-program s2dw_analysis
+program s2dw_wstats
 
+  use s2_sky_mod
   use s2dw_types_mod
   use s2dw_error_mod
-  use s2dw_fileio_mod
   use s2dw_core_mod
-  use s2_sky_mod
+  use s2dw_stat_mod
 
   implicit none
 
+  character(len=STRING_LEN) :: filename_in, filename_out
+  character(len=STRING_LEN), allocatable :: description(:)
+  character(len=STRING_LEN) :: line
   complex(dpc), allocatable :: flm(:,:)
-  complex(spc), allocatable :: flm_temp(:,:)
+  complex(spc), allocatable :: flm_sp(:,:)
   real(dp), allocatable :: K_gamma(:,:)
   real(dp), allocatable :: Phi2(:)
   complex(dpc), allocatable :: Slm(:,:)
   real(dp), allocatable :: admiss(:)
   type(s2dw_wav_abg), allocatable :: wavdyn(:)
   complex(dpc), allocatable :: scoeff(:,:)
+  type(s2_sky) :: sky
+  real(dp), allocatable :: mu(:,:), var(:,:), skew(:,:), kur(:,:)
+  integer :: isim, nsim
   integer :: J
   integer :: J_max
   integer :: B
-  logical :: B_in = .false.
-  integer :: N
+  integer :: N = 3
   integer :: bl_scoeff
-  real(dp) :: alpha
-  integer :: nside
+  real(dp) :: alpha = 2d0
   logical :: admiss_pass
-  type(s2_sky) :: sky
-  integer :: fail = 0
   logical :: use_Jmax
-  character(len=STRING_LEN) :: filename_in, filename_out
-  integer :: file_extension = 1
-
-  character(len=*), parameter ::  FILE_TYPE_FITS = 'fits'
-  character(len=*), parameter ::  FILE_TYPE_MAT = 'm'
-  character(len=STRING_LEN) :: file_type = FILE_TYPE_FITS
+  integer :: fail = 0
+  integer :: fileid, iostat
   character(len=STRING_LEN) :: error_string
 
-  ! Set default parameter values.
-  N = 3
-  alpha = 2d0
-  use_Jmax = .true.
-  filename_in = 'wmap_ilc_3yr_v2_n64.fits'
-  filename_out = 'wmap_ilc_3yr_v2_n64.s2dw'
-
-  ! Parse options from command line.
+  ! Parse input parameters.
   call parse_options()
 
-  ! Read sky.
-  sky = s2_sky_init(filename_in, file_extension)
-  nside = s2_sky_get_nside(sky)
-  if (.not. B_in) B = 2*nside
+  ! Set J to maximum if not specified and check valid.
   J_max = ceiling(log(real(B,dp))/log(alpha) - TOL_CEIL)
   if(use_Jmax) J = J_max
   if(J > J_max) then
@@ -92,7 +70,7 @@ program s2dw_analysis
   end if
 
   ! Allocate memory.
-  allocate(flm_temp(0:B-1,0:B-1), stat=fail)
+  allocate(flm_sp(0:B-1,0:B-1), stat=fail)
   allocate(flm(0:B-1,0:B-1), stat=fail)
   allocate(K_gamma(0:J,0:B-1), stat=fail)
   allocate(Phi2(0:B-1), stat=fail)
@@ -101,11 +79,6 @@ program s2dw_analysis
   if(fail /= 0) then
      call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_analysis')
   end if
-
-  ! Compute spherical harmonic coefficients.
-  call s2_sky_compute_alm(sky, B-1, B-1)
-  call s2_sky_get_alm(sky, flm_temp(0:B-1,0:B-1))
-  flm(0:B-1,0:B-1) = flm_temp(0:B-1,0:B-1)
 
   ! Compute kernels, scaling function and directionality coefficients.
   call s2dw_core_init_kernels(K_gamma, Phi2, bl_scoeff, J, B, alpha)
@@ -122,31 +95,69 @@ program s2dw_analysis
      call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_analysis')
   end if
 
-  ! Perform S2DW analysis.
-  call s2dw_core_analysis_flm2wav_dynamic(wavdyn, scoeff, flm, K_gamma, Slm, &
-       J, B, N, bl_scoeff, alpha)
+  ! Open file containing list of maps.
+  open(fileid, file=filename_in, form='formatted', status='old')
 
-  ! Save wavelet and scaling coefficients.
-  select case (trim(file_type))
+  ! Count number of simulations.
+  nsim = 0
+  do
+     read(fileid,'(a)',iostat=iostat) line
+     if (iostat < 0) exit
+     nsim = nsim + 1
+  end do
+  rewind(fileid)
 
-  case (FILE_TYPE_FITS)
-     call s2dw_fileio_fits_wav_write(wavdyn, scoeff, J, B, N, bl_scoeff, &
-          alpha, filename_out)
+  ! Allocate memory for file descriptions.
+  allocate(description(0:nsim-1), stat=fail)
+  allocate(mu(0:nsim-1,0:J), stat=fail)
+  allocate(var(0:nsim-1,0:J), stat=fail)
+  allocate(skew(0:nsim-1,0:J), stat=fail)
+  allocate(kur(0:nsim-1,0:J), stat=fail)
+  if(fail /= 0) then
+     call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_wstats')
+  end if
 
-  case (FILE_TYPE_MAT)
-     call s2dw_fileio_matlab_wav_write(wavdyn, scoeff, J, B, N, &
-          bl_scoeff, alpha, filename_out)
+  ! Read maps and compute moments. 
+  do isim = 0, nsim-1
 
-  case default
-     call s2dw_error(S2DW_ERROR_FILEIO, 's2dw_analysis', &
-          comment_add='Invalid file type option')
+     ! Read filename.
+     read(fileid,'(a)',iostat=iostat) description(isim)
 
-  end select
+     ! Read sky.
+     sky = s2_sky_init(description(isim), S2_SKY_FILE_TYPE_MAP)
+
+     ! Compute spherical harmonic coefficients.
+     call s2_sky_compute_alm(sky, B-1, B-1)
+     call s2_sky_get_alm(sky, flm_sp(0:B-1,0:B-1))
+     flm(0:B-1,0:B-1) = flm_sp(0:B-1,0:B-1)
+
+     ! Compute wavelet transform.
+     call s2dw_core_analysis_flm2wav_dynamic(wavdyn, scoeff, flm, &
+          K_gamma, Slm, J, B, N, bl_scoeff, alpha)
+
+     ! Compute wavelet coefficient statistics.
+     call s2dw_stat_moments(wavdyn, J, B, N, alpha, &
+          mu(isim,0:J), var(isim,0:J), skew(isim,0:J), kur(isim,0:J))
+
+     ! Free temporary memory.
+     call s2_sky_free(sky)
+     call s2dw_core_free_wavdyn(wavdyn)
+
+  end do
+
+  ! Close file.
+  close(fileid)
+
+  ! Save wavelet coefficient statistics.
+  call s2dw_stat_moments_write(filename_out, nsim, description, J, &
+       mu(0:nsim-1,0:J), var(0:nsim-1,0:J), &
+       skew(0:nsim-1,0:J), kur(0:nsim-1,0:J))
 
   ! Free memory.
-  deallocate(flm_temp, flm, K_gamma, Phi2, Slm, admiss, scoeff)
-  call s2dw_core_free_wavdyn(wavdyn)
-  call s2_sky_free(sky)
+  deallocate(description)
+  deallocate(flm_sp, flm, K_gamma, Phi2, Slm, admiss, scoeff)
+  deallocate(mu, var, skew, kur)
+
 
   !----------------------------------------------------------------------------
 
@@ -158,7 +169,7 @@ contains
   !
   !! Parses the options passed when program called.
   !
-!!! @author J. D. McEwen (mcewen@mrao.cam.ac.uk)
+  !! @author J. D. McEwen (mcewen@mrao.cam.ac.uk)
   !! @version 0.1 - November 2007
   !
   ! Revisions:
@@ -192,13 +203,12 @@ contains
        select case (trim(opt))
 
        case ('-help')
-          write(*,'(a)') 'Usage: s2dw_analysis [-inp filename_in]'
-          write(*,'(a)') '                     [-out filename_out]'
-          write(*,'(a)') '                     [-file_type file_type (fits; m)]'
-          write(*,'(a)') '                     [-B B]'  
-          write(*,'(a)') '                     [-N N]'  
-          write(*,'(a)') '                     [-alpha alpha]' 
-          write(*,'(a)') '                     [-J J]'
+          write(*,'(a)') 'Usage: s2dw_wstat [-inp filename_in]'
+          write(*,'(a)') '                  [-out filename_out]'
+          write(*,'(a)') '                  [-B B]'  
+          write(*,'(a)') '                  [-N N]'  
+          write(*,'(a)') '                  [-alpha alpha]' 
+          write(*,'(a)') '                  [-J J]'
           stop
 
        case ('-inp')
@@ -207,12 +217,8 @@ contains
        case ('-out')
           filename_out = trim(arg)
 
-       case ('-file_type')
-          file_type = trim(arg)
-
        case ('-B')
           read(arg,*) B
-          B_in = .true.
 
        case ('-N')
           read(arg,*) N
@@ -233,4 +239,4 @@ contains
   end subroutine parse_options
 
 
-end program s2dw_analysis
+end program s2dw_wstats

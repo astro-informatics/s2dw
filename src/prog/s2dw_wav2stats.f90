@@ -1,49 +1,39 @@
 !------------------------------------------------------------------------------
-! s2dw_synthesis
+! s2dw_wav2stats
 !
-!! Reconstructs a Healpix sky map from S2DW wavelet and scaling coefficients.
-!!
-!! Notes:
-!!   - The Healpix nside resolution parameter of the output sky map is set 
-!!     by nside=B/2.
-!!   - The spherical harmonic transform and inverse provided by Healpix 
-!!     is not exact, hence these reduce the numerical precision of the 
-!!     `exact' reconstruction of the original real space map from its wavelet 
-!!     coefficients.
+!! Compute wavelet coefficient statistics from already computed
+!! wavelet coefficients.
 !! 
-!! Usage: s2dw_synthesis
+!! Usage: s2dw_wav2stats
 !!   - [-help]: Displays usage information.
 !!   - [-inp filename_in]: Name of input S2DW formatted fits/matlab file 
 !!     containing wavelet and scaling coefficients.
-!!   - [-out filename_out]: Name of output Healpix sky fits map.
+!!   - [-out filename_out]: Name of output statistic file.
 !!   - [-file_type file_type (fits; m)]: String specifying type of input 
 !!     S2DW file to read  (fits or matlab m file) [default=fits].
-!!   - [-nside nside]: Resolution of output Healpix map (if not specified 
-!!     then set to B/2).
 !     
 !! @author J. D. McEwen (mcewen@mrao.cam.ac.uk)
-!! @version 0.1 - November 2007
 !
 ! Revisions:
-!   November 2007 - Written by Jason McEwen 
+!   Febraury 2012 - Written by Jason McEwen 
 !------------------------------------------------------------------------------
 
-program s2dw_synthesis
+program s2dw_wav2stats
 
   use s2dw_types_mod
   use s2dw_error_mod
   use s2dw_fileio_mod
   use s2dw_core_mod
+  use s2dw_stat_mod
   use s2_sky_mod
 
   implicit none
 
-  complex(dpc), allocatable :: flm(:,:)
-  complex(spc), allocatable :: flm_temp(:,:)
-  real(dp), allocatable :: K_gamma(:,:)
-  real(dp), allocatable :: Phi2(:)
-  complex(dpc), allocatable :: Slm(:,:)
-  real(dp), allocatable :: admiss(:)
+  character(len=STRING_LEN) :: filename_in, filename_out
+  character(len=*), parameter ::  FILE_TYPE_FITS = 'fits'
+  character(len=*), parameter ::  FILE_TYPE_MAT = 'm'
+  character(len=STRING_LEN) :: file_type = FILE_TYPE_FITS
+  character(len=STRING_LEN) :: description(0:0)
   type(s2dw_wav_abg), allocatable :: wavdyn(:)
   complex(dpc), allocatable :: scoeff(:,:)
   integer :: J
@@ -51,16 +41,9 @@ program s2dw_synthesis
   integer :: N
   integer :: bl_scoeff
   real(dp) :: alpha
-  integer :: nside
-  logical :: nside_in = .false.
-  logical :: admiss_pass
-  type(s2_sky) :: sky
   integer :: fail = 0
-  character(len=STRING_LEN) :: filename_in, filename_out
-
-  character(len=*), parameter ::  FILE_TYPE_FITS = 'fits'
-  character(len=*), parameter ::  FILE_TYPE_MAT = 'm'
-  character(len=STRING_LEN) :: file_type = FILE_TYPE_FITS
+  integer :: nsim
+  real(dp), allocatable :: mu(:,:), var(:,:), skew(:,:), kur(:,:)
 
   ! Parse options from command line.
   call parse_options()
@@ -77,47 +60,34 @@ program s2dw_synthesis
           bl_scoeff, alpha, filename_in)
 
   case default
-     call s2dw_error(S2DW_ERROR_FILEIO, 's2dw_synthesis', &
+     call s2dw_error(S2DW_ERROR_FILEIO, 's2dw_wav2stats', &
           comment_add='Invalid file type option')
 
   end select
 
-  ! Allocate memory.
-  allocate(flm(0:B-1,0:B-1), stat=fail)
-  allocate(flm_temp(0:B-1,0:B-1), stat=fail)
-  allocate(K_gamma(0:J,0:B-1), stat=fail)
-  allocate(Phi2(0:B-1), stat=fail)
-  allocate(Slm(0:B-1,0:N-1), stat=fail)
-  allocate(admiss(0:B-1), stat=fail)
+  ! Allocate memory for statistics.
+  allocate(mu(0:0,0:J), stat=fail)
+  allocate(var(0:0,0:J), stat=fail)
+  allocate(skew(0:0,0:J), stat=fail)
+  allocate(kur(0:0,0:J), stat=fail)
   if(fail /= 0) then
-     call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_synthesis')
+     call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_wav2stats')
   end if
 
-  ! Compute kernels, scaling function and directionality coefficients.
-  call s2dw_core_init_kernels(K_gamma, Phi2, bl_scoeff, J, B, alpha)
-  call s2dw_core_init_directionality(Slm, B, N)
-  admiss_pass = s2dw_core_admiss(admiss, K_gamma, Phi2, B, J)
-  if(.not. admiss_pass) then
-     call s2dw_error(S2DW_ERROR_ADMISS_FAIL, 's2dw_synthesis')
-  end if
+  ! Compute statistics.
+  call s2dw_stat_moments(wavdyn, J, B, N, alpha, &
+       mu(0,0:J), var(0,0:J), skew(0,0:J), kur(0,0:J))
 
-  ! Perform S2DW synthesis.
-  call s2dw_core_synthesis_wav2flm_dynamic(flm, wavdyn, scoeff, K_gamma, Phi2, &
-       Slm, J, B, N, bl_scoeff, alpha)
-
-  ! Reconstruct real space sky from spherical harmonic coefficients.
-  if (.not. nside_in) nside = B/2
-  flm_temp(0:B-1,0:B-1) = flm(0:B-1,0:B-1)
-  sky = s2_sky_init(flm_temp(0:B-1,0:B-1), B-1, B-1)
-  call s2_sky_compute_map(sky, nside)
-
-  ! Save sky.
-  call s2_sky_write_map_file(sky, filename_out)
+  ! Save statistics.
+  nsim = 1
+  description(0) = trim(filename_in)
+  call s2dw_stat_moments_write(filename_out, nsim, description, &
+       J, mu(0:0,0:J), var(0:0,0:J), skew(0:0,0:J), kur(0:0,0:J))
 
   ! Free memory.
-  deallocate(flm, K_gamma, Phi2, Slm, admiss, scoeff)
   call s2dw_core_free_wavdyn(wavdyn)
-  call s2_sky_free(sky)
+  deallocate(scoeff)
+  deallocate(mu, var, skew, kur)
 
 
   !----------------------------------------------------------------------------
@@ -130,7 +100,7 @@ contains
   !
   !! Parses the options passed when program called.
   !
-!!! @author J. D. McEwen (mcewen@mrao.cam.ac.uk)
+  !! @author J. D. McEwen (mcewen@mrao.cam.ac.uk)
   !! @version 0.1 - November 2007
   !
   ! Revisions:
@@ -164,10 +134,9 @@ contains
        select case (trim(opt))
 
        case ('-help')
-          write(*,'(a)') 'Usage: s2dw_synthesis [-inp filename_in]'
+          write(*,'(a)') 'Usage: s2dw_wav2stats [-inp filename_in]'
           write(*,'(a)') '                      [-out filename_out]'
           write(*,'(a)') '                      [-file_type file_type (fits; m)]'
-          write(*,'(a)') '                      [-nside nside]'
           stop
 
        case ('-inp')
@@ -179,10 +148,6 @@ contains
        case ('-file_type')
           file_type = trim(arg)
 
-       case ('-nside')
-          read(arg,*) nside
-          nside_in = .true.
-
        case default
           print '("unknown option ",a," ignored")', trim(opt)            
 
@@ -192,4 +157,4 @@ contains
   end subroutine parse_options
 
 
-end program s2dw_synthesis
+end program s2dw_wav2stats

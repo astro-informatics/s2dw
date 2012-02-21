@@ -100,6 +100,8 @@ prog:    $(S2DWBIN)/s2dw_wav2sky   \
          $(S2DWBIN)/s2dw_analysis  \
          $(S2DWBIN)/s2dw_synthesis \
          $(S2DWBIN)/s2dw_wavplot   \
+         $(S2DWBIN)/s2dw_wav2stats \
+         $(S2DWBIN)/s2dw_wstats    \
          $(S2DWBIN)/s2dw_mat2fits  \
          $(S2DWBIN)/s2dw_fits2mat  \
          $(S2DWBIN)/s2dw_about
@@ -203,6 +205,18 @@ $(S2DWBIN)/s2dw_wavplot:       $(S2DWINC)/s2dw_wavplot.o
 	$(FC)                                          \
 	-o $(S2DWBIN)/s2dw_wavplot                       \
 	$(S2DWINC)/s2dw_wavplot.o $(LDFLAGSPROG) $(LDFLAGS) $(PPFLAGS)                       
+
+$(S2DWINC)/s2dw_wav2stats.o:     $(S2DWPROG)/s2dw_wav2stats.f90 lib
+$(S2DWBIN)/s2dw_wav2stats:       $(S2DWINC)/s2dw_wav2stats.o
+	$(FC)                                          \
+	-o $(S2DWBIN)/s2dw_wav2stats                       \
+	$(S2DWINC)/s2dw_wav2stats.o $(LDFLAGSPROG) $(LDFLAGS) $(PPFLAGS)                
+
+$(S2DWINC)/s2dw_wstats.o:     $(S2DWPROG)/s2dw_wstats.f90 lib
+$(S2DWBIN)/s2dw_wstats:       $(S2DWINC)/s2dw_wstats.o
+	$(FC)                                          \
+	-o $(S2DWBIN)/s2dw_wstats                       \
+	$(S2DWINC)/s2dw_wstats.o $(LDFLAGSPROG) $(LDFLAGS) $(PPFLAGS)                
 
 $(S2DWINC)/s2dw_mat2fits.o:     $(S2DWPROG)/s2dw_mat2fits.f90 lib
 $(S2DWBIN)/s2dw_mat2fits:       $(S2DWINC)/s2dw_mat2fits.o
