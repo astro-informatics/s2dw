@@ -41,6 +41,9 @@ module s2dw_types_mod
   !! Admissibility tolerance.
   real(dp), public, parameter :: TOL_ADMISS = 1e-12
 
+  !! Zero tolerance.
+  real(dp), public, parameter :: TOL_ZERO = 1e-12
+
   !! Numerical integration tolerance.
   real(dp), public, parameter :: TOL_QUAD = 1d-12
 

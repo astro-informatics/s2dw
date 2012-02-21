@@ -32,7 +32,7 @@ module s2dw_error_mod
   ! Global variables
   !---------------------------------------
 
-  integer, parameter :: S2DW_ERROR_NUM = 13
+  integer, parameter :: S2DW_ERROR_NUM = 14
 
   integer, public, parameter :: &
        S2DW_ERROR_NONE = 0, &
@@ -41,14 +41,15 @@ module s2dw_error_mod
        S2DW_ERROR_INIT_FAIL = 3, &
        S2DW_ERROR_MEM_ALLOC_FAIL = 4, &
        S2DW_ERROR_ARTH = 5, &
-       S2DW_ERROR_SIZE_WARNING = 6, &
-       S2DW_ERROR_SIZE_INVALID = 7, &
-       S2DW_ERROR_SIZE_NOT_DEF = 8, &
-       S2DW_ERROR_ARG_INVALID = 9, &
-       S2DW_ERROR_ARG_WARNING = 10, &
-       S2DW_ERROR_QUAD_STEP_EXCEED = 11, &
-       S2DW_ERROR_ADMISS_FAIL = 12, &
-       S2DW_ERROR_FILEIO = 13
+       S2DW_ERROR_ARTH_WARNING = 6, &
+       S2DW_ERROR_SIZE_WARNING = 7, &
+       S2DW_ERROR_SIZE_INVALID = 8, &
+       S2DW_ERROR_SIZE_NOT_DEF = 9, &
+       S2DW_ERROR_ARG_INVALID = 10, &
+       S2DW_ERROR_ARG_WARNING = 11, &
+       S2DW_ERROR_QUAD_STEP_EXCEED = 12, &
+       S2DW_ERROR_ADMISS_FAIL = 13, &
+       S2DW_ERROR_FILEIO = 14
 
   ! Each element of the error_comment array must have the same length, thus
   ! space with trailing space characters.  When come to use trim to remove 
@@ -63,6 +64,7 @@ module s2dw_error_mod
        'Object initialisation failed                                             ', &
        'Memory allocation failed                                                 ', &
        'Arithmetic exception                                                     ', &
+       'Arithmetic warning                                                       ', &
        'Warning: Sizes not in recommended range                                  ', &
        'Invalid sizes                                                            ', &
        'Sizes not defined                                                        ', &
@@ -83,6 +85,7 @@ module s2dw_error_mod
        .true.,  &
        .true.,  &
        .true.,  &
+       .false., &
        .false., &
        .true.,  &
        .true.,  &

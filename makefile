@@ -75,11 +75,12 @@ endif
 
 # ======== OBJECT FILES TO MAKE ========
 
-S2DWOBJ = $(S2DWINC)/s2dw_types_mod.o    \
+S2DWOBJ = $(S2DWINC)/s2dw_types_mod.o   \
           $(S2DWINC)/s2dw_error_mod.o   \
           $(S2DWINC)/s2dw_dl_mod.o      \
           $(S2DWINC)/s2dw_fileio_mod.o  \
-          $(S2DWINC)/s2dw_core_mod.o   
+          $(S2DWINC)/s2dw_core_mod.o    \
+          $(S2DWINC)/s2dw_stat_mod.o   
 
 
 # ======== MAKE RULES ========
@@ -161,6 +162,11 @@ $(S2DWINC)/s2dw_fileio_mod.o:  $(S2DWSRC)/s2dw_fileio_mod.f90   \
                            $(S2DWINC)/s2dw_error_mod.o    \
                            $(S2DWINC)/s2dw_core_mod.o    
 $(S2DWINC)/s2dw_core_mod.o:  $(S2DWSRC)/s2dw_core_mod.f90   \
+                           $(S2DWINC)/s2dw_types_mod.o    \
+                           $(S2DWINC)/s2dw_error_mod.o    \
+                           $(S2DWINC)/s2dw_dl_mod.o       
+$(S2DWINC)/s2dw_stat_mod.o:  $(S2DWSRC)/s2dw_stat_mod.f90   \
+                           $(S2DWINC)/s2dw_core_mod.o    \
                            $(S2DWINC)/s2dw_types_mod.o    \
                            $(S2DWINC)/s2dw_error_mod.o    \
                            $(S2DWINC)/s2dw_dl_mod.o       
