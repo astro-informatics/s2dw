@@ -17,7 +17,7 @@
 !! @author J. D. McEwen (mcewen@mrao.cam.ac.uk)
 !
 ! Revisions:
-!   November 2012 - Written by Jason McEwen
+!   February 2012 - Written by Jason McEwen
 !------------------------------------------------------------------------------
 
 program s2dw_wstats
