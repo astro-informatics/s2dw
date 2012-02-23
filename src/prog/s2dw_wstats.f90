@@ -27,6 +27,9 @@ program s2dw_wstats
   use s2dw_error_mod
   use s2dw_core_mod
   use s2dw_stat_mod
+#ifdef MPI
+  use mpi
+#endif
 
   implicit none
 
@@ -55,6 +58,19 @@ program s2dw_wstats
   integer :: fail = 0
   integer :: fileid, iostat
   character(len=STRING_LEN) :: error_string
+
+#ifdef MPI
+  integer :: status(1:MPI_STATUS_SIZE)
+  integer :: rank, size, master, node, ierr, tag, start, end, nbox
+  real(dp), allocatable :: boxed(:)
+  integer :: ibox, jj
+  integer :: MPI_REAL_DP
+  call mpi_init(ierr)
+  call mpi_type_create_f90_real(dp_p, dp_r, MPI_REAL_DP, ierr)
+  call mpi_comm_rank(MPI_COMM_WORLD, rank, ierr)
+  call mpi_comm_size(MPI_COMM_WORLD, size, ierr)
+  master = 0
+#endif
 
   ! Parse input parameters.
   call parse_options()
@@ -117,11 +133,21 @@ program s2dw_wstats
      call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_wstats')
   end if
 
-  ! Read maps and compute moments. 
+  ! Read all filenames and close file.
   do isim = 0, nsim-1
-
-     ! Read filename.
      read(fileid,'(a)',iostat=iostat) description(isim)
+  end do
+  close(fileid)
+
+  ! Read maps and compute moments. 
+#ifdef MPI
+  start = rank * nsim / size
+  end = (rank+1) * nsim / size - 1
+  if (rank == size-1) end = nsim - 1 
+  do isim = start, end
+#else
+  do isim = 0, nsim-1
+#endif
 
      ! Read sky.
      sky = s2_sky_init(description(isim), S2_SKY_FILE_TYPE_MAP)
@@ -145,18 +171,104 @@ program s2dw_wstats
 
   end do
 
-  ! Close file.
-  close(fileid)
+  ! Transfer and then save data.
+#ifdef MPI
+  if (rank /= master) then
 
-  ! Save wavelet coefficient statistics.
-  call s2dw_stat_moments_write(filename_out, nsim, description, J, &
-       mu(0:nsim-1,0:J), var(0:nsim-1,0:J), &
-       skew(0:nsim-1,0:J), kur(0:nsim-1,0:J))
+     ! Box up data.
+     nbox = 4 * (end-start+1) * (J+1)
+     allocate(boxed(0:nbox-1), stat=fail)
+     if(fail /= 0) then
+        call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_wstats')
+     end if
+     ibox = 0
+     do isim = start, end
+        do jj = 0, J
+           boxed(ibox) = mu(isim, jj)
+           ibox = ibox + 1
+           boxed(ibox) = var(isim, jj)
+           ibox = ibox + 1
+           boxed(ibox) = skew(isim, jj)
+           ibox = ibox + 1
+           boxed(ibox) = kur(isim, jj)
+           ibox = ibox + 1
+        end do
+     end do
+
+     ! Send wavelet statistics to master node.
+     call mpi_send(boxed(0), nbox, MPI_REAL_DP, master, &
+          rank, MPI_COMM_WORLD, ierr)
+
+     ! Free boxed data.
+     deallocate(boxed)
+
+  else
+
+     ! Read all descriptions on master.
+     open(fileid, file=filename_in, form='formatted', status='old')
+     do isim = 0, nsim-1
+        read(fileid,'(a)',iostat=iostat) description(isim)
+     end do
+     close(fileid)
+
+     ! Receive wavelet statistics on master node and then save.
+     do node = 0, size-1
+        if (node /= master) then
+
+           ! Set up box to receive data.
+           start = node * nsim / size
+           end = (node+1) * nsim / size - 1
+           if (node == size-1) end = nsim - 1 
+           nbox = 4 * (end-start+1) * (J+1)
+           allocate(boxed(0:nbox-1), stat=fail)
+           if(fail /= 0) then
+              call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_wstats')
+           end if
+
+           ! Receive data.
+           call mpi_recv(boxed(0), nbox, MPI_REAL_DP, node, &
+                node, MPI_COMM_WORLD, status, ierr)
+
+           ! Unbox data.
+           ibox = 0
+           do isim = start, end
+              do jj = 0, J
+                 mu(isim, jj) = boxed(ibox)
+                 ibox = ibox + 1
+                 var(isim, jj) = boxed(ibox)
+                 ibox = ibox + 1
+                 skew(isim, jj) = boxed(ibox)
+                 ibox = ibox + 1
+                 kur(isim, jj) = boxed(ibox)
+                 ibox = ibox + 1
+              end do
+           end do
+
+           ! Free boxed data.
+           deallocate(boxed)
+
+        end if
+     end do
+
+#endif
+
+     ! Save wavelet coefficient statistics.
+     call s2dw_stat_moments_write(filename_out, nsim, description, J, &
+          mu(0:nsim-1,0:J), var(0:nsim-1,0:J), &
+          skew(0:nsim-1,0:J), kur(0:nsim-1,0:J))
+
+#ifdef MPI
+  end if
+#endif
 
   ! Free memory.
   deallocate(description)
   deallocate(flm_sp, flm, K_gamma, Phi2, Slm, admiss, scoeff)
   deallocate(mu, var, skew, kur)
+
+#ifdef MPI
+  call mpi_finalize(ierr)
+#endif
 
 
   !----------------------------------------------------------------------------
@@ -209,6 +321,9 @@ contains
           write(*,'(a)') '                  [-N N]'  
           write(*,'(a)') '                  [-alpha alpha]' 
           write(*,'(a)') '                  [-J J]'
+#ifdef MPI
+          call mpi_finalize(ierr)
+#endif
           stop
 
        case ('-inp')

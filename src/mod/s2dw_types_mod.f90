@@ -24,8 +24,14 @@ module s2dw_types_mod
   !! Type definition for single precision real.
   integer, public, parameter :: sp  = SELECTED_REAL_KIND(5,30)
 
+  !! Decimal precision for double precision real.
+  integer, public, parameter :: dp_p = 12
+
+  !! Radix for double precision real.
+  integer, public, parameter :: dp_r = 200
+
   !! Type definition for double precision real.
-  integer, public, parameter :: dp  = SELECTED_REAL_KIND(12,200)
+  integer, public, parameter :: dp  = SELECTED_REAL_KIND(dp_p, dp_r)
 
   !! Type definition for single precisison complex.
   integer, public, parameter :: spc = KIND((1.0_sp, 1.0_sp))

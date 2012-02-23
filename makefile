@@ -4,14 +4,15 @@
 # ======== COMPILER ========
 
 #FC      = f95
-FC      = gfortran
+#FC      = gfortran
+FC      = mpif90
 #FC      = g95
 
 ifeq ($(FC),f95)
   OPTF95 = -w=x95
 endif
 
-OPT = $(OPTF95) -m64 -O3 -fopenmp \
+OPT = $(OPTF95) -m64 -O3 -fopenmp -DMPI \
       -DS2DW_VERSION=\"1.0b1\" -DS2DW_BUILD=\"`svnversion -n .`\" 
 
 
@@ -69,6 +70,8 @@ ifeq ($(FC),f95)
 else ifeq ($(FC),g95)
   PPFLAGS = -cpp $(OPT)
 else ifeq ($(FC),gfortran)
+  PPFLAGS = -cpp $(OPT)
+else ifeq ($(FC),mpif90)
   PPFLAGS = -cpp $(OPT)
 endif
 
