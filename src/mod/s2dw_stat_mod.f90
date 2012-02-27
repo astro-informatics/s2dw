@@ -55,10 +55,10 @@ contains
   !!  - N: Azimuthal band limit [input].
   !!  - bl_scoeff: Upper band limit for scaling coefficients [input].
   !!  - alpha: Basis dilation factor [input].
-  !!  - mean(0:J): Mean of wavelet coefficients for each scale.
-  !!  - var(0:J): Variance of wavelet coefficients for each scale.
-  !!  - skew(0:J): Skewness of wavelet coefficients for each scale.
-  !!  - kur(0:J): Kurtosis of wavelet coefficients for each scale.
+  !!  - mean(0:J): Mean of wavelet coefficients for each scale [output].
+  !!  - var(0:J): Variance of wavelet coefficients for each scale [output].
+  !!  - skew(0:J): Skewness of wavelet coefficients for each scale [output].
+  !!  - kur(0:J): Excess kurtosis of wavelet coefficients for each scale [output].
   !
   !! @author J. D. McEwen
   !! @version 0.1 February 2012
@@ -186,7 +186,7 @@ contains
   !!    map and scale [input].
   !!  - skew(0:nsim-1,0:J): Skewness of wavelet coefficients for each
   !!    map and scale [input].
-  !!  - kur(0:nsim-1,0:J): Kurtosis of wavelet coefficients for each
+  !!  - kur(0:nsim-1,0:J): Excess kurtosis of wavelet coefficients for each
   !!    map and scale [input].
   !
   !! @author J. D. McEwen
@@ -255,8 +255,8 @@ contains
   !!  - N: Azimuthal band limit [input].
   !!  - alpha: Basis dilation factor [input].
   !!  - hist_nbins: Number of histogram bins [input].
-  !!  - hist_bins(0:J,0:hist_nbins-1): Central position of each bin.
-  !!  - hist_vals(0:J,0:hist_nbins-1): Count in each bin.
+  !!  - hist_bins(0:J,0:hist_nbins-1): Central position of each bin [input].
+  !!  - hist_vals(0:J,0:hist_nbins-1): Count in each bin [output].
   !
   !! @author S. M. Feeney
   !! @version 0.1 February 2012
