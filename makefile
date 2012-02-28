@@ -108,7 +108,8 @@ prog:    $(S2DWBIN)/s2dw_wav2sky   \
          $(S2DWBIN)/s2dw_maskgen   \
          $(S2DWBIN)/s2dw_mat2fits  \
          $(S2DWBIN)/s2dw_fits2mat  \
-         $(S2DWBIN)/s2dw_about
+         $(S2DWBIN)/s2dw_about     \
+         $(S2DWBIN)/s2dw_maskapply
 
 $(S2DWINC)/%.o: $(S2DWSRC)/%.f90
 	$(FC) $(FFLAGS) $(PPFLAGS) -c $< -o $@ 
@@ -246,3 +247,8 @@ $(S2DWBIN)/s2dw_about:       $(S2DWINC)/s2dw_about.o
 	-o $(S2DWBIN)/s2dw_about                       \
 	$(S2DWINC)/s2dw_about.o $(LDFLAGSPROG) $(LDFLAGS) $(PPFLAGS)
 
+$(S2DWINC)/s2dw_maskapply.o:     $(S2DWPROG)/s2dw_maskapply.f90 lib
+$(S2DWBIN)/s2dw_maskapply:       $(S2DWINC)/s2dw_maskapply.o
+	$(FC)                                              \
+	-o $(S2DWBIN)/s2dw_maskapply                       \
+	$(S2DWINC)/s2dw_maskapply.o $(LDFLAGSPROG) $(LDFLAGS) $(PPFLAGS)
