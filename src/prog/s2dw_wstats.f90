@@ -54,7 +54,7 @@ program s2dw_wstats
   integer :: bl_scoeff
   real(dp) :: alpha = 2d0
   logical :: admiss_pass
-  logical :: use_Jmax
+  logical :: use_Jmax = .true.
   integer :: fail = 0
   integer :: fileid, iostat
   character(len=STRING_LEN) :: error_string
@@ -81,7 +81,7 @@ program s2dw_wstats
   if(J > J_max) then
      J = J_max
      write(error_string,'(a,i4)') 'J too large, setting to maximum J = ', J_max
-     call s2dw_error(S2DW_ERROR_ARG_WARNING, 's2dw_analysis', &
+     call s2dw_error(S2DW_ERROR_ARG_WARNING, 's2dw_wstats', &
           comment_add=trim(error_string))
   end if
 
@@ -93,7 +93,7 @@ program s2dw_wstats
   allocate(Slm(0:B-1,0:N-1), stat=fail)
   allocate(admiss(0:B-1), stat=fail)
   if(fail /= 0) then
-     call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_analysis')
+     call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_wstats')
   end if
 
   ! Compute kernels, scaling function and directionality coefficients.
@@ -101,14 +101,14 @@ program s2dw_wstats
   call s2dw_core_init_directionality(Slm, B, N)
   admiss_pass = s2dw_core_admiss(admiss, K_gamma, Phi2, B, J)
   if(.not. admiss_pass) then
-     call s2dw_error(S2DW_ERROR_ADMISS_FAIL, 's2dw_analysis')
+     call s2dw_error(S2DW_ERROR_ADMISS_FAIL, 's2dw_wstats')
   end if
 
   ! Allocate memory for scaling coefficients (cannot be done earlier 
   ! since don't know bl_scoeff).
   allocate(scoeff(0:bl_scoeff-1, 0:bl_scoeff-1), stat=fail)
   if(fail /= 0) then
-     call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_analysis')
+     call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_wstats')
   end if
 
   ! Open file containing list of maps.
