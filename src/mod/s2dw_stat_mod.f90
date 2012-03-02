@@ -49,7 +49,9 @@ contains
   !!    calling routine.
   !!
   !! Variables:
-  !!  - wavdyn(0:J)%coeff: Wavelet coefficients for each scale [input].
+  !!  - wavdyn(0:J)%coeff: Wavelet coefficients for each scale
+  !!    [input/ouput].  On ouput the wavelet coefficients will be
+  !!    masked if a mask was passed when calling this function.
   !!  - J: Maximum analysis scale depth [input].
   !!  - B: Harmonic band limit [input].
   !!  - N: Azimuthal band limit [input].
@@ -59,6 +61,10 @@ contains
   !!  - var(0:J): Variance of wavelet coefficients for each scale [output].
   !!  - skew(0:J): Skewness of wavelet coefficients for each scale [output].
   !!  - kur(0:J): Excess kurtosis of wavelet coefficients for each scale [output].
+  !!  - wavdyn_mask(0:J)%coeff: Binary mask defined in the wavelet
+  !!    domain (values of zero and one indicate wavelet coefficient
+  !!    are ignored and included, respectively, in the calculation
+  !!    of moments) [input].
   !
   !! @author J. D. McEwen
   !! @version 0.1 February 2012
@@ -68,9 +74,9 @@ contains
   !--------------------------------------------------------------------------
 
   subroutine s2dw_stat_moments(wavdyn, J, B, N, alpha, &
-       mean, var, skew, kur)
+       mean, var, skew, kur, wavdyn_mask)
 
-    type(s2dw_wav_abg), intent(in) :: wavdyn(0:J)
+    type(s2dw_wav_abg), intent(inout) :: wavdyn(0:J)
     integer, intent(in) :: J
     integer, intent(in) :: B
     integer, intent(in) :: N
@@ -79,6 +85,7 @@ contains
     real(dp), intent(out) :: var(0:J)
     real(dp), intent(out) :: skew(0:J)
     real(dp), intent(out) :: kur(0:J)
+    type(s2dw_wav_abg), intent(in), optional :: wavdyn_mask(0:J)
 
     real(dp), allocatable :: s(:,:,:), p(:,:,:)
     real(dp) :: ep, sdev
@@ -86,7 +93,7 @@ contains
     integer :: fail = 0
 
     !$omp parallel default(none) &
-    !$omp shared(jj, wavdyn, B, N, J, alpha, mean, var, skew, kur) &
+    !$omp shared(jj, wavdyn, wavdyn_mask, B, N, J, alpha, mean, var, skew, kur) &
     !$omp private(bl_hi, bl_lo, nj, s, p, ep, sdev, fail)
     !$omp do schedule(dynamic,1) 
     do jj = 0,J
@@ -103,8 +110,19 @@ contains
           bl_lo = max(floor(B / (alpha**(jj+1)) ), 0)
        end if
 
-       ! Set number of samples for given analysis depth jj.
-       nj = (2*bl_hi-1) * (2*bl_hi) * N        
+       ! Apply mask.
+       if (present(wavdyn_mask)) then
+          wavdyn(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+               wavdyn(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
+               * wavdyn_mask(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
+       end if
+
+       ! Set number of non-masked samples for given analysis depth jj.
+       if (present(wavdyn_mask)) then
+          nj = nint(sum(wavdyn_mask(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)))
+       else
+          nj = (2*bl_hi-1) * (2*bl_hi) * N
+       end if
        if (nj < 2) then
           call s2dw_error(S2DW_ERROR_SIZE_INVALID, 's2dw_stat_moments', &
                comment_add='Require at least two samples to compute moments')
@@ -119,30 +137,66 @@ contains
 
        ! Compute moments.
 
-       mean(jj) = &
-            sum(wavdyn(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)) / nj
+       if (present(wavdyn_mask)) then
 
-       s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
-            wavdyn(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) - mean(jj)
-       ep = sum(s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
+          mean(jj) = &
+               sum(wavdyn(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1), &
+               mask=abs(wavdyn_mask(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) - 1.0) < TOL_ZERO) / nj
 
-       p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
-            s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
-            * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
-       var(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
+          s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+               wavdyn(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) - mean(jj)
+          ep = sum(s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1), &
+               mask=abs(wavdyn_mask(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) - 1.0) < TOL_ZERO)
 
-       p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
-            p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
-            * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
-       skew(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
+          p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+               s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
+               * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
+          var(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1), &
+               mask=abs(wavdyn_mask(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) - 1.0) < TOL_ZERO)
 
-       p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
-            p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
-            * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
-       kur(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
+          p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+               p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
+               * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
+          skew(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1), &
+               mask=abs(wavdyn_mask(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) - 1.0) < TOL_ZERO)
 
-       var(jj) = (var(jj) - ep**2/real(nj,dp)) / real(nj-1,dp)
-       sdev = sqrt(var(jj))
+          p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+               p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
+               * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
+          kur(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1), &
+               mask=abs(wavdyn_mask(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) - 1.0) < TOL_ZERO)
+
+          var(jj) = (var(jj) - ep**2/real(nj,dp)) / real(nj-1,dp)
+          sdev = sqrt(var(jj))
+
+       else
+          
+          mean(jj) = &
+               sum(wavdyn(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)) / nj
+
+          s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+               wavdyn(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) - mean(jj)
+          ep = sum(s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
+
+          p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+               s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
+               * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
+          var(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
+
+          p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+               p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
+               * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
+          skew(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
+
+          p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+               p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
+               * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
+          kur(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
+
+          var(jj) = (var(jj) - ep**2/real(nj,dp)) / real(nj-1,dp)
+          sdev = sqrt(var(jj))
+
+       end if
 
        if (var(jj) < TOL_ZERO) then
           call s2dw_error(S2DW_ERROR_ARTH_WARNING, 's2dw_stat_moments', &

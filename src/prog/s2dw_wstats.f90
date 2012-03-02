@@ -8,6 +8,8 @@
 !!   - [-help]: Display usage information.
 !!   - [-inp filename_in]: Name of input file containing list of maps to 
 !!     compute wavelet coefficients and then statistics of.
+!!   - [-mask filename_mask]: Name of input file containing mask,
+!!     defined in wavelet space, to apply when computing moments.
 !!   - [-out filename_out]: Name of output statistic file.
 !!   - [-B B]: Harmonic band limit (if not specified set to 2*nside).
 !!   - [-N N]: Azimuthal band limit [default=3].
@@ -26,6 +28,7 @@ program s2dw_wstats
   use s2dw_types_mod
   use s2dw_error_mod
   use s2dw_core_mod
+  use s2dw_fileio_mod
   use s2dw_stat_mod
 #ifdef MPI
   use mpi
@@ -34,6 +37,7 @@ program s2dw_wstats
   implicit none
 
   character(len=STRING_LEN) :: filename_in, filename_out
+  character(STRING_LEN) :: filename_mask
   character(len=STRING_LEN), allocatable :: description(:)
   character(len=STRING_LEN) :: line
   complex(dpc), allocatable :: flm(:,:)
@@ -42,19 +46,20 @@ program s2dw_wstats
   real(dp), allocatable :: Phi2(:)
   complex(dpc), allocatable :: Slm(:,:)
   real(dp), allocatable :: admiss(:)
-  type(s2dw_wav_abg), allocatable :: wavdyn(:)
-  complex(dpc), allocatable :: scoeff(:,:)
+  type(s2dw_wav_abg), allocatable :: wavdyn(:), wavdyn_mask(:)
+  complex(dpc), allocatable :: scoeff(:,:), scoeff_mask(:,:)
   type(s2_sky) :: sky
   real(dp), allocatable :: mu(:,:), var(:,:), skew(:,:), kur(:,:)
   integer :: isim, nsim
-  integer :: J
+  integer :: J, J_check
   integer :: J_max
-  integer :: B
-  integer :: N = 3
+  integer :: B, B_check
+  integer :: N = 3, N_check
   integer :: bl_scoeff
-  real(dp) :: alpha = 2d0
+  real(dp) :: alpha = 2d0, alpha_check
   logical :: admiss_pass
   logical :: use_Jmax = .true.
+  logical :: apply_mask = .false.
   integer :: fail = 0
   integer :: fileid, iostat
   character(len=STRING_LEN) :: error_string
@@ -85,6 +90,18 @@ program s2dw_wstats
           comment_add=trim(error_string))
   end if
 
+  ! Optionally read and apply mask from file.
+  if (apply_mask) then
+     call s2dw_fileio_fits_wav_read(wavdyn_mask, scoeff_mask, &
+                                    J_check, B_check, N_check, bl_scoeff, &
+                                    alpha_check, filename_mask)
+     if (J /= J_check .or. B /= B_check .or.&
+         N /= N_check .or. alpha /= alpha_check) then
+        call s2dw_error(S2DW_ERROR_ARG_INVALID, 's2dw_wstat', &
+             comment_add='Inconsistent mask wavelet transform parameters')
+     end if
+  end if
+  
   ! Allocate memory.
   allocate(flm_sp(0:B-1,0:B-1), stat=fail)
   allocate(flm(0:B-1,0:B-1), stat=fail)
@@ -162,8 +179,14 @@ program s2dw_wstats
           K_gamma, Slm, J, B, N, bl_scoeff, alpha)
 
      ! Compute wavelet coefficient statistics.
-     call s2dw_stat_moments(wavdyn, J, B, N, alpha, &
-          mu(isim,0:J), var(isim,0:J), skew(isim,0:J), kur(isim,0:J))
+     if (apply_mask) then
+        call s2dw_stat_moments(wavdyn, J, B, N, alpha, &
+             mu(isim,0:J), var(isim,0:J), skew(isim,0:J), kur(isim,0:J),&
+             wavdyn_mask)
+     else
+        call s2dw_stat_moments(wavdyn, J, B, N, alpha, &
+             mu(isim,0:J), var(isim,0:J), skew(isim,0:J), kur(isim,0:J))
+     end if
 
      ! Free temporary memory.
      call s2_sky_free(sky)
@@ -265,6 +288,10 @@ program s2dw_wstats
   deallocate(description)
   deallocate(flm_sp, flm, K_gamma, Phi2, Slm, admiss, scoeff)
   deallocate(mu, var, skew, kur)
+  if (apply_mask) then
+     call s2dw_core_free_wavdyn(wavdyn_mask)
+     deallocate(scoeff_mask)
+  end if
 
 #ifdef MPI
   call mpi_finalize(ierr)
@@ -317,6 +344,7 @@ contains
        case ('-help')
           write(*,'(a)') 'Usage: s2dw_wstat [-inp filename_in]'
           write(*,'(a)') '                  [-out filename_out]'
+          write(*,'(a)') '                  [-mask filename_mask]'
           write(*,'(a)') '                  [-B B]'  
           write(*,'(a)') '                  [-N N]'  
           write(*,'(a)') '                  [-alpha alpha]' 
@@ -331,6 +359,10 @@ contains
 
        case ('-out')
           filename_out = trim(arg)
+
+       case ('-mask')
+          filename_mask = trim(arg)
+          apply_mask = .true.
 
        case ('-B')
           read(arg,*) B
