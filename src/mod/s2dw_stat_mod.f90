@@ -166,30 +166,32 @@ contains
                * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
           skew(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1), &
                mask=abs(wavdyn_mask(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) - 1.0) < TOL_ZERO)
-       
-       if (present(five)) then
           
-          p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
-               p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
-               * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
-          five(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
-          
-          if (present(six)) then
-             
-             p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
-                  p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
-                  * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
-             six(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
-             
-          end if
-          
-       end if
-
           p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
                p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
                * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
           kur(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1), &
                mask=abs(wavdyn_mask(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) - 1.0) < TOL_ZERO)
+          
+          if (present(five)) then
+             
+             p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+                  p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
+                  * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
+             five(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1), &
+                  mask=abs(wavdyn_mask(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) - 1.0) < TOL_ZERO)
+             
+             if (present(six)) then
+                
+                p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+                     p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
+                     * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
+                six(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1), &
+                     mask=abs(wavdyn_mask(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) - 1.0) < TOL_ZERO)
+                
+             end if
+             
+          end if
 
           var(jj) = (var(jj) - ep**2/real(nj,dp)) / real(nj-1,dp)
           sdev = sqrt(var(jj))
@@ -217,6 +219,24 @@ contains
                p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
                * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
           kur(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
+          
+          if (present(five)) then
+             
+             p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+                  p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
+                  * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
+             five(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
+             
+             if (present(six)) then
+                
+                p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+                     p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
+                     * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
+                six(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
+                
+             end if
+             
+          end if
 
           var(jj) = (var(jj) - ep**2/real(nj,dp)) / real(nj-1,dp)
           sdev = sqrt(var(jj))
@@ -225,9 +245,15 @@ contains
 
        if (var(jj) < TOL_ZERO) then
           call s2dw_error(S2DW_ERROR_ARTH_WARNING, 's2dw_stat_moments', &
-               'Skewness/kurtosis undefined when variance zero')
+               'Skewness/kurtosis & higher undefined when variance zero')
           skew(jj) = 0d0
           kur(jj) = 0d0
+          if (present(five)) then
+             five(jj) = 0d0
+             if (present(six)) then
+                six(jj) = 0d0
+             end if
+          end if
        else
           skew(jj) = skew(jj) / (nj * sdev**3)
           kur(jj) = kur(jj) / (nj * var(jj)**2) - 3d0
