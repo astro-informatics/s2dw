@@ -42,7 +42,8 @@ contains
   ! s2dw_stat_moments
   !
   !! Compute moments of wavelets coefficients for each scale,
-  !! including the mean, variance, skewness and kurtosis.
+  !! including the mean, variance, skewness and kurtosis. The fifth- and 
+  !! sixth-order standardized moments can also be optionally returned.
   !!
   !! Notes:
   !!  - Memory for the computed moments must already be allocated by the 
@@ -65,6 +66,10 @@ contains
   !!    domain (values of zero and one indicate wavelet coefficient
   !!    are ignored and included, respectively, in the calculation
   !!    of moments) [input].
+  !!  - five(0:J): Fifth-order moment of wavelet coefficients for each 
+  !!               scale [output].
+  !!  - six(0:J): Excess sixth-order moment of wavelet coefficients for 
+  !!              each scale [output].
   !
   !! @author J. D. McEwen
   !! @version 0.1 February 2012
@@ -74,7 +79,7 @@ contains
   !--------------------------------------------------------------------------
 
   subroutine s2dw_stat_moments(wavdyn, J, B, N, alpha, &
-       mean, var, skew, kur, wavdyn_mask)
+       mean, var, skew, kur, wavdyn_mask, five, six)
 
     type(s2dw_wav_abg), intent(inout) :: wavdyn(0:J)
     integer, intent(in) :: J
@@ -85,6 +90,8 @@ contains
     real(dp), intent(out) :: var(0:J)
     real(dp), intent(out) :: skew(0:J)
     real(dp), intent(out) :: kur(0:J)
+    real(dp), intent(out), optional :: five(0:J)
+    real(dp), intent(out), optional :: six(0:J)
     type(s2dw_wav_abg), intent(in), optional :: wavdyn_mask(0:J)
 
     real(dp), allocatable :: s(:,:,:), p(:,:,:)
@@ -93,7 +100,7 @@ contains
     integer :: fail = 0
 
     !$omp parallel default(none) &
-    !$omp shared(jj, wavdyn, wavdyn_mask, B, N, J, alpha, mean, var, skew, kur) &
+    !$omp shared(jj, wavdyn, wavdyn_mask, B, N, J, alpha, mean, var, skew, kur, five, six) &
     !$omp private(bl_hi, bl_lo, nj, s, p, ep, sdev, fail)
     !$omp do schedule(dynamic,1) 
     do jj = 0,J
@@ -159,6 +166,24 @@ contains
                * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
           skew(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1), &
                mask=abs(wavdyn_mask(jj)%coeff(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) - 1.0) < TOL_ZERO)
+       
+       if (present(five)) then
+          
+          p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+               p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
+               * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
+          five(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
+          
+          if (present(six)) then
+             
+             p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
+                  p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
+                  * s(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1)
+             six(jj) = sum(p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1))
+             
+          end if
+          
+       end if
 
           p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) = &
                p(0:2*bl_hi-2, 0:2*bl_hi-1, 0:N-1) &
@@ -206,6 +231,12 @@ contains
        else
           skew(jj) = skew(jj) / (nj * sdev**3)
           kur(jj) = kur(jj) / (nj * var(jj)**2) - 3d0
+          if (present(five)) then
+             five(jj) = five(jj) / (nj * sdev**5)
+             if (present(six)) then
+                six(jj) = six(jj) / (nj * var(jj)**3) - 15d0
+             end if
+          end if
        end if
 
        ! Free temporary memory.
@@ -224,7 +255,8 @@ contains
   !! Write moments of wavelets coefficients for each scale, including
   !! the mean, variance, skewness and kurtosis.  Moments are written
   !! to a single line (ordered mean, variance, skewness and kurtosis)
-  !! for each set of wavelet coefficients.
+  !! for each set of wavelet coefficients. Fifth and sixth order standardized
+  !! moments can also be optionally included.
   !!
   !! Variables:
   !!  - filename: Name of file to write wavelet coefficient moments to 
@@ -242,6 +274,10 @@ contains
   !!    map and scale [input].
   !!  - kur(0:nsim-1,0:J): Excess kurtosis of wavelet coefficients for each
   !!    map and scale [input].
+  !!  - five(0:J): Fifth-order moment of wavelet coefficients for each 
+  !!               scale [input].
+  !!  - six(0:J): Excess sixth-order moment of wavelet coefficients for 
+  !!              each scale [input].
   !
   !! @author J. D. McEwen
   !! @version 0.1 February 2012
@@ -251,7 +287,7 @@ contains
   !--------------------------------------------------------------------------
 
   subroutine s2dw_stat_moments_write(filename, nsim, description, &
-       J, mu, var, skew, kur)
+       J, mu, var, skew, kur, five, six)
 
     character(len=*), intent(in) :: filename
     integer, intent(in) :: nsim
@@ -261,6 +297,8 @@ contains
     real(dp), intent(in) :: var(0:nsim-1,0:J)
     real(dp), intent(in) :: skew(0:nsim-1,0:J)
     real(dp), intent(in) :: kur(0:nsim-1,0:J)
+    real(dp), optional :: five(0:nsim-1,0:J)
+    real(dp), optional :: six(0:nsim-1,0:J)
 
     integer :: fileid = 10, isim, jj
 
@@ -284,6 +322,16 @@ contains
        do jj = 0, J
           write(fileid, '(e27.20,a)', advance='no')  kur(isim,jj), ', '
        end do
+       if (present(five)) then
+          do jj = 0, J
+             write(fileid, '(e27.20,a)', advance='no')  five(isim,jj), ', '
+          end do
+          if (present(six)) then
+             do jj = 0, J
+                write(fileid, '(e27.20,a)', advance='no')  six(isim,jj), ', '
+             end do
+          end if
+       end if
        write(fileid,*)
     end do
 

@@ -50,6 +50,7 @@ program s2dw_wstats
   complex(dpc), allocatable :: scoeff(:,:), scoeff_mask(:,:)
   type(s2_sky) :: sky
   real(dp), allocatable :: mu(:,:), var(:,:), skew(:,:), kur(:,:)
+  real(dp), allocatable :: five(:,:), six(:,:)
   integer :: isim, nsim
   integer :: J, J_check
   integer :: J_max
@@ -146,6 +147,8 @@ program s2dw_wstats
   allocate(var(0:nsim-1,0:J), stat=fail)
   allocate(skew(0:nsim-1,0:J), stat=fail)
   allocate(kur(0:nsim-1,0:J), stat=fail)
+  allocate(five(0:nsim-1,0:J), stat=fail)
+  allocate(six(0:nsim-1,0:J), stat=fail)
   if(fail /= 0) then
      call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_wstats')
   end if
@@ -182,10 +185,11 @@ program s2dw_wstats
      if (apply_mask) then
         call s2dw_stat_moments(wavdyn, J, B, N, alpha, &
              mu(isim,0:J), var(isim,0:J), skew(isim,0:J), kur(isim,0:J),&
-             wavdyn_mask)
+             wavdyn_mask, five(isim,0:J), six(isim,0:J))
      else
         call s2dw_stat_moments(wavdyn, J, B, N, alpha, &
-             mu(isim,0:J), var(isim,0:J), skew(isim,0:J), kur(isim,0:J))
+             mu(isim,0:J), var(isim,0:J), skew(isim,0:J), kur(isim,0:J), &
+             five = five(isim,0:J), six = six(isim,0:J))
      end if
 
      ! Free temporary memory.
@@ -199,7 +203,7 @@ program s2dw_wstats
   if (rank /= master) then
 
      ! Box up data.
-     nbox = 4 * (end-start+1) * (J+1)
+     nbox = 6 * (end-start+1) * (J+1)
      allocate(boxed(0:nbox-1), stat=fail)
      if(fail /= 0) then
         call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_wstats')
@@ -214,6 +218,10 @@ program s2dw_wstats
            boxed(ibox) = skew(isim, jj)
            ibox = ibox + 1
            boxed(ibox) = kur(isim, jj)
+           ibox = ibox + 1
+           boxed(ibox) = five(isim, jj)
+           ibox = ibox + 1
+           boxed(ibox) = six(isim, jj)
            ibox = ibox + 1
         end do
      end do
@@ -242,7 +250,7 @@ program s2dw_wstats
            start = node * nsim / size
            end = (node+1) * nsim / size - 1
            if (node == size-1) end = nsim - 1 
-           nbox = 4 * (end-start+1) * (J+1)
+           nbox = 6 * (end-start+1) * (J+1)
            allocate(boxed(0:nbox-1), stat=fail)
            if(fail /= 0) then
               call s2dw_error(S2DW_ERROR_MEM_ALLOC_FAIL, 's2dw_wstats')
@@ -264,6 +272,10 @@ program s2dw_wstats
                  ibox = ibox + 1
                  kur(isim, jj) = boxed(ibox)
                  ibox = ibox + 1
+                 five(isim, jj) = boxed(ibox)
+                 ibox = ibox + 1
+                 six(isim, jj) = boxed(ibox)
+                 ibox = ibox + 1
               end do
            end do
 
@@ -278,7 +290,8 @@ program s2dw_wstats
      ! Save wavelet coefficient statistics.
      call s2dw_stat_moments_write(filename_out, nsim, description, J, &
           mu(0:nsim-1,0:J), var(0:nsim-1,0:J), &
-          skew(0:nsim-1,0:J), kur(0:nsim-1,0:J))
+          skew(0:nsim-1,0:J), kur(0:nsim-1,0:J), &
+          five(0:nsim-1,0:J), six(0:nsim-1,0:J))
 
 #ifdef MPI
   end if
@@ -287,7 +300,7 @@ program s2dw_wstats
   ! Free memory.
   deallocate(description)
   deallocate(flm_sp, flm, K_gamma, Phi2, Slm, admiss, scoeff)
-  deallocate(mu, var, skew, kur)
+  deallocate(mu, var, skew, kur, five, six)
   if (apply_mask) then
      call s2dw_core_free_wavdyn(wavdyn_mask)
      deallocate(scoeff_mask)
