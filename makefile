@@ -13,7 +13,7 @@ ifeq ($(FC),f95)
 endif
 
 OPT = $(OPTF95) -m64 -O3 -fopenmp \
-      -DS2DW_VERSION=\"1.0b1\" -DS2DW_BUILD=\"`svnversion -n .`\" 
+      -DS2DW_VERSION=\"1.1b1\" -DS2DW_BUILD=\"`svnversion -n .`\" 
 #-DMPI
 
 # ======== LINKS ========
