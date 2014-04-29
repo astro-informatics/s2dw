@@ -100,8 +100,8 @@ contains
     integer :: fail = 0
 
     !$omp parallel default(none) &
-    !$omp shared(jj, wavdyn, wavdyn_mask, B, N, J, alpha, mean, var, skew, kur, five, six) &
-    !$omp private(bl_hi, bl_lo, nj, s, p, ep, sdev, fail)
+    !$omp shared(wavdyn, wavdyn_mask, B, N, J, alpha, mean, var, skew, kur, five, six) &
+    !$omp private(jj, bl_hi, bl_lo, nj, s, p, ep, sdev, fail)
     !$omp do schedule(dynamic,1) 
     do jj = 0,J
 
@@ -411,8 +411,8 @@ contains
     
     
     !$omp parallel default(none) &
-    !$omp shared(jj, wavdyn, B, N, J, alpha, hist_nbins, hist_bins, hist_vals) &
-    !$omp private(bl_hi, bl_lo, nj, ii, fail, hist_bin_size)
+    !$omp shared(wavdyn, B, N, J, alpha, hist_nbins, hist_bins, hist_vals) &
+    !$omp private(jj, bl_hi, bl_lo, nj, ii, fail, hist_bin_size)
     !$omp do schedule(dynamic,1) 
     do jj = 0,J
 

@@ -388,8 +388,8 @@ contains
        end if
        Tmmm(0:bl_hi-1, 0:bl_hi-1, 0:2*N-2) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(jj, el, K_gamma, Slm, flm, N, bl_lo, bl_hi) &
-       !$omp private(dl,m,mm,mmm,msign,mmmsign,sb) &
+       !$omp shared(jj, K_gamma, Slm, flm, N, bl_lo, bl_hi) &
+       !$omp private(el, dl,m,mm,mmm,msign,mmmsign,sb) &
        !$omp reduction(+: Tmmm)
        !$omp do schedule(dynamic, 10)
        do el = bl_lo+1,bl_hi-1
@@ -447,8 +447,8 @@ contains
        end if
        Tmmg(0:bl_hi-1, 0:bl_hi-1, 0:N-1) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(Tmmm, gg, mm, bl_hi, N, Tmmg) &
-       !$omp private(m, gamma_g, mmm, k_indicator)
+       !$omp shared(Tmmm, bl_hi, N, Tmmg) &
+       !$omp private(gg, mm, m, gamma_g, mmm, k_indicator)
        !$omp do schedule(dynamic,10) collapse(2)
        do gg = 0,N-1
           do mm = 0,bl_hi-1
@@ -475,8 +475,8 @@ contains
        end if
        Tmbg(0:bl_hi-1, 0:2*bl_hi-1, 0:N-1) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(Tmmg, gg, bb, bl_hi, N, Tmbg) &
-       !$omp private(m, mm, beta_b, gamma_g, eta)
+       !$omp shared(Tmmg, bl_hi, N, Tmbg) &
+       !$omp private(gg, bb, m, mm, beta_b, gamma_g, eta)
        !$omp do schedule(dynamic,10) collapse(2)
        do gg = 0,N-1
           do bb = 0,2*bl_hi-1
@@ -512,7 +512,8 @@ contains
             tmp(0:bl_hi-1), wav(jj,0:2*bl_hi-2,0,0), &
             FFTW_MEASURE)
        !$omp parallel default(none) &
-       !$omp shared(wav, jj, fftw_plan, Tmbg, gg, bb, bl_hi, N)
+       !$omp shared(wav, jj, fftw_plan, Tmbg, bl_hi, N)
+       !$omp private(gg, bb)
        !$omp do schedule(dynamic,10) collapse(2)
        do gg = 0,N-1
           do bb = 0,2*bl_hi-1
@@ -622,8 +623,8 @@ contains
        end if
        Tmmm(0:bl_hi-1, 0:bl_hi-1, 0:2*N-2) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(jj, el, K_gamma, Slm, flm, N, bl_lo, bl_hi) &
-       !$omp private(dl,m,mm,mmm,msign,mmmsign,sb) &
+       !$omp shared(jj, K_gamma, Slm, flm, N, bl_lo, bl_hi) &
+       !$omp private(el,dl,m,mm,mmm,msign,mmmsign,sb) &
        !$omp reduction(+: Tmmm)
        !$omp do schedule(dynamic, 10)
        do el = bl_lo+1,bl_hi-1
@@ -681,8 +682,8 @@ contains
        end if
        Tmmg(0:bl_hi-1, 0:bl_hi-1, 0:N-1) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(Tmmm, gg, mm, bl_hi, N, Tmmg) &
-       !$omp private(m, gamma_g, mmm, k_indicator)
+       !$omp shared(Tmmm, bl_hi, N, Tmmg) &
+       !$omp private(gg, mm, m, gamma_g, mmm, k_indicator)
        !$omp do schedule(dynamic,10) collapse(2)
        do gg = 0,N-1
           do mm = 0,bl_hi-1
@@ -710,8 +711,8 @@ contains
        end if
        Tmbg(0:bl_hi-1, 0:2*bl_hi-1, 0:N-1) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(Tmmg, gg, bb, bl_hi, N, Tmbg) &
-       !$omp private(m, mm, beta_b, gamma_g, eta)
+       !$omp shared(Tmmg, bl_hi, N, Tmbg) &
+       !$omp private(gg, bb, m, mm, beta_b, gamma_g, eta)
        !$omp do schedule(dynamic,10) collapse(2)
        do gg = 0,N-1
           do bb = 0,2*bl_hi-1
@@ -752,7 +753,8 @@ contains
             tmp(0:bl_hi-1),  wavdyn(jj)%coeff(0:2*bl_hi-2, 0, 0), &
             FFTW_MEASURE)
        !$omp parallel default(none) &
-       !$omp shared(wavdyn, jj, fftw_plan, Tmbg, gg, bb, bl_hi, N)
+       !$omp shared(wavdyn, jj, fftw_plan, Tmbg, bl_hi, N)
+       !$omp private(gg, bb)
        !$omp do schedule(dynamic,10) collapse(2)
        do gg = 0,N-1
           do bb = 0,2*bl_hi-1
@@ -867,7 +869,8 @@ contains
        call dfftw_plan_dft_r2c_1d(fftw_plan, 2*bl_hi-1, &
             Wa(0:2*bl_hi-2), V(0:bl_hi-1,0,0), FFTW_MEASURE)
        !$omp parallel default(none) &
-       !$omp shared(gg, bb, fftw_plan, wav, jj, V, bl_hi, N)
+       !$omp shared(fftw_plan, wav, jj, V, bl_hi, N)
+       !$omp private(gg, bb)
        !$omp do schedule(dynamic,10) collapse(2)
        do gg = 0,N-1
           do bb = 0,2*bl_hi-1
@@ -889,8 +892,8 @@ contains
        end if
        Umnb(0:bl_hi-1, 0:N-1, 0:2*bl_hi-1) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(gg, mmm, bl_hi, N, V) &
-       !$omp private(gamma_g, k_indicator) &
+       !$omp shared(bl_hi, N, V) &
+       !$omp private(gg, mmm, gamma_g, k_indicator) &
        !$omp reduction(+: Umnb)
        !$omp do schedule(dynamic,1) collapse(2)
        do gg = 0,N-1
@@ -910,8 +913,8 @@ contains
        ! Step 2b: Integrate over beta	(i.e. compute Vmmm)
        V(0:bl_hi-1, 0:2*bl_hi-2, 0:N-1) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(mmm, bb, bl_hi, N, Umnb) &
-       !$omp private(beta_b, w, k_indicator, mm) &
+       !$omp shared(bl_hi, N, Umnb) &
+       !$omp private(bb, mmm, beta_b, w, k_indicator, mm) &
        !$omp reduction(+: V)
        !$omp do schedule(dynamic,10) collapse(2)
        do bb = 0,2*bl_hi-1
@@ -933,8 +936,8 @@ contains
 
        ! Step 3a: Combine Vmmm terms for m' and -m' outside of el sum
        !$omp parallel default(none) &
-       !$omp shared(mmm, m, bl_hi, N, V) &
-       !$omp private(k_indicator, mm)
+       !$omp shared(bl_hi, N, V) &
+       !$omp private(mmm, m, k_indicator, mm)
        !$omp do schedule(dynamic,10) collapse(2)       
        do mmm = 0,N-1
           do mm = 1,bl_hi-1
@@ -959,8 +962,8 @@ contains
        end if
        wig(0:bl_hi-1, 0:bl_hi-1, 0:N-1) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(el, bl_lo, bl_hi, N, V, wig) &
-       !$omp private(dl, k_indicator, mmm, m)
+       !$omp shared(bl_lo, bl_hi, N, V, wig) &
+       !$omp private(el, dl, k_indicator, mmm, m)
        !$omp do schedule(dynamic,10)
        do el = bl_lo+1,bl_hi-1
           call s2dw_dl_beta_operator(dl(-el:el,-el:el), PION2, el)
@@ -980,8 +983,8 @@ contains
 
        ! Compute harmonic component (for this jj) from Wigner coefficients
        !$omp parallel default(none) &
-       !$omp shared(el, bl_lo, bl_hi, N, wig, K_gamma, Slm, jj, flm) &
-       !$omp private(m, mmm, k_indicator)
+       !$omp shared(bl_lo, bl_hi, N, wig, K_gamma, Slm, jj, flm) &
+       !$omp private(el, m, mmm, k_indicator)
        !$omp do schedule(dynamic,10)
        do el = bl_lo+1,bl_hi-1
           do mmm = 0,min(N-1,el)
@@ -1109,7 +1112,8 @@ contains
        call dfftw_plan_dft_r2c_1d(fftw_plan, 2*bl_hi-1, &
             Wa(0:2*bl_hi-2), V(0:bl_hi-1,0,0), FFTW_MEASURE)
        !$omp parallel default(none) &
-       !$omp shared(gg, bb, fftw_plan, wavdyn, jj, V, bl_hi, N)
+       !$omp shared(fftw_plan, wavdyn, jj, V, bl_hi, N)
+       !$omp private(gg, bb)
        !$omp do schedule(dynamic,10) collapse(2)
        do gg = 0,N-1
           do bb = 0,2*bl_hi-1
@@ -1132,8 +1136,8 @@ contains
        end if
        Umnb(0:bl_hi-1, 0:N-1, 0:2*bl_hi-1) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(gg, mmm, bl_hi, N, V) &
-       !$omp private(gamma_g, k_indicator) &
+       !$omp shared(bl_hi, N, V) &
+       !$omp private(gg, mmm, gamma_g, k_indicator) &
        !$omp reduction(+: Umnb)
        !$omp do schedule(dynamic,1) collapse(2)
        do gg = 0,N-1
@@ -1153,8 +1157,8 @@ contains
        ! Step 2b: Integrate over beta	(i.e. compute Vmmm)
        V(0:bl_hi-1, 0:2*bl_hi-2, 0:N-1) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(mmm, bb, bl_hi, N, Umnb) &
-       !$omp private(beta_b, w, k_indicator, mm) &
+       !$omp shared(bl_hi, N, Umnb) &
+       !$omp private(bb, mmm, beta_b, w, k_indicator, mm) &
        !$omp reduction(+: V)
        !$omp do schedule(dynamic,10) collapse(2)
        do bb = 0,2*bl_hi-1
@@ -1176,8 +1180,8 @@ contains
 
        ! Step 3a: Combine Vmmm terms for m' and -m' outside of el sum
        !$omp parallel default(none) &
-       !$omp shared(mmm, m, bl_hi, N, V) &
-       !$omp private(k_indicator, mm)
+       !$omp shared(bl_hi, N, V) &
+       !$omp private(mmm, m, k_indicator, mm)
        !$omp do schedule(dynamic,10) collapse(2)      
        do mmm = 0,N-1
           do mm = 1,bl_hi-1    
@@ -1202,8 +1206,8 @@ contains
        end if
        wig(0:bl_hi-1, 0:bl_hi-1, 0:N-1) = cmplx(0d0, 0d0)
        !$omp parallel default(none) &
-       !$omp shared(el, bl_lo, bl_hi, N, V, wig) &
-       !$omp private(dl, k_indicator, mmm, m)
+       !$omp shared(bl_lo, bl_hi, N, V, wig) &
+       !$omp private(el, dl, k_indicator, mmm, m)
        !$omp do schedule(dynamic,10)
        do el = bl_lo+1,bl_hi-1
           call s2dw_dl_beta_operator(dl(-el:el,-el:el), PION2, el)
@@ -1223,8 +1227,8 @@ contains
 
        ! Compute harmonic component (for this jj) from Wigner coefficients
        !$omp parallel default(none) &
-       !$omp shared(el, bl_lo, bl_hi, N, wig, K_gamma, Slm, jj, flm) &
-       !$omp private(m, mmm, k_indicator)
+       !$omp shared(bl_lo, bl_hi, N, wig, K_gamma, Slm, jj, flm) &
+       !$omp private(el, m, mmm, k_indicator)
        !$omp do schedule(dynamic,10)
        do el = bl_lo+1,bl_hi-1
           do mmm = 0,min(N-1,el)
