@@ -19,10 +19,10 @@ DESCRIPTION
      reconstruction errors and execution times of this implementation.
 
 VERSION
-     Release 1.0, 8 December 2008
+     Release 1.1
 
 AUTHORS
-     J. D. McEwen (mcewen@mrao.cam.ac.uk) and Y. Wiaux
+     J. D. McEwen (http://www.jasonmcewen.org) and Y. Wiaux
 
 REFERENCE
      Y. Wiaux, J. D. McEwen, P. Vandergheynst, and O. Blanc
@@ -31,28 +31,28 @@ REFERENCE
      (arXiv:0712.3519)
 
 DOCUMENTATION
-     See doc/index_s2dw.html
+     See doc/index.html
 
 REQUIREMENTS
      Library: 
        FFTW (http://www.fftw.org/)
        CFITSIO (http://heasarc.gsfc.nasa.gov/docs/software/fitsio/)
      Utility programs:
-       S2 (http://www.mrao.cam.ac.uk/~jdm57/)
+       S2 (http://www.jasonmcewen.org/codes.html)
        HEALPix (http://healpix.jpl.nasa.gov/)
 
 INSTALLATION
-     See doc/index_s2dw.html
+     See doc/index.html
 
 DOWNLOAD
-     http://www.mrao.cam.ac.uk/~jdm57/
+     http://www.jasonmcewen.org/codes.html
 
 SUPPORT
      See http://cosmocoffee.info/ forums
 
 NOTE
      The package is still under development
-     Please report problems/bugs by email to: mcewen@mrao.cam.ac.uk
+     Please report problems/bugs by email to Jason McEwen
 
 LICENSE
      S2DW package to compute the scale discretised wavelet transform on
